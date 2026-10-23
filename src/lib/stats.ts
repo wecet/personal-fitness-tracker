@@ -50,6 +50,9 @@ export function formatSets(sets: WorkoutSet[], metric: ExerciseMetric): string {
 
 export const formatPb = (pb: PersonalBest, metric: ExerciseMetric) => formatSet(pb, metric);
 
+/** Epley estimated one-rep max. */
+export const estimate1RM = (s: WorkoutSet) => (s.reps <= 1 ? s.weight : s.weight * (1 + s.reps / 30));
+
 /** Kilograms moved (reps × weight). Timed holds don't count. */
 export function entryVolume(sets: WorkoutSet[], metric: ExerciseMetric): number {
   return metric === 'time' ? 0 : sets.reduce((sum, s) => sum + s.reps * s.weight, 0);
