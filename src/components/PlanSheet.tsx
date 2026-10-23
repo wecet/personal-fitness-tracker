@@ -1,5 +1,6 @@
 import { MUSCLE_BY_ID } from '../../shared/muscles.ts';
 import { useData, useUi } from '../data.tsx';
+import { suggestNext } from '../lib/progression.ts';
 import { formatPb, formatSets } from '../lib/stats.ts';
 import { Icon } from './Icon.tsx';
 import { Sheet } from './Sheet.tsx';
@@ -46,6 +47,7 @@ export function PlanSheet({ onClose }: { onClose: () => void }) {
                       <span className="muted small">
                         {MUSCLE_BY_ID[ex.muscle].name}
                         {last && ` · last ${formatSets(last.sets, ex.metric)}`}
+                        {last && <span className="next"> → {suggestNext(last.sets, ex.metric)?.short}</span>}
                       </span>
                     </span>
                     {pb && <span className="pb-badge">PB {formatPb(pb, ex.metric)}</span>}

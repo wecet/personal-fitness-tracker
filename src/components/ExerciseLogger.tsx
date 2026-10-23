@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useData, useUi } from '../data.tsx';
 import { beats, bestSet, dateKey, formatPb, formatSet, parseDateKey, type PersonalBest } from '../lib/stats.ts';
 import type { Exercise, ExerciseMetric, WorkoutSet } from '../../shared/types.ts';
+import { suggestNext } from '../lib/progression.ts';
 import { useSession } from '../session.tsx';
 import { Icon } from './Icon.tsx';
 
@@ -60,6 +61,8 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
   const [sets, setSets] = useState<SetDraft[]>(() => (last ? last.sets.map((s) => toDraft(s, metric)) : [blank()]));
   const [stopwatch, setStopwatch] = useState<{ index: number; startedAt: number } | null>(null);
   const [, tick] = useState(0);
+  const suggestion = last ? suggestNext(last.sets, metric) : null;
+  const [applied, setApplied] = useState(false);
   const [done, setDone] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -107,6 +110,18 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
 
   return (
     <form className="logger" onSubmit={submit}>
+      {suggestion && (
+        <div className="suggestion">
+          <span className="suggestion-icon">↗</span>
+          <span>{suggestion.detail}</span>
+          <button type="button" className="pill" disabled={applied} onClick={() => {
+            setSets(suggestion.sets.map((s) => toDraft(s, metric)));
+            setApplied(true);
+          }}>
+            {applied ? 'Applied' : 'Apply'}
+          </button>
+        </div>
+      )}
       {activeSession && <p className="muted small logger-hint">Tap a set number when it’s done to start your rest.</p>}
       <div className="logger-sets">
         <div className="set-row set-head">
