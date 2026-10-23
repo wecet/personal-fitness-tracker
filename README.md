@@ -1,4 +1,4 @@
-# RepMap
+# Ember
 
 A personal workout tracker that runs as a web app. Tap a muscle on the body map to log sets, track PBs, and watch the red recovery fill fade. It's self-hosted with Docker and only reachable from your own devices over Tailscale.
 
@@ -33,7 +33,7 @@ The SQLite database is written to `./data/fitness.db`.
    docker compose up -d --build
    ```
 
-5. Open `https://repmap.<your-tailnet>.ts.net` on any device that has Tailscale installed. On the host machine itself, `http://localhost:3000` also works.
+5. Open `https://ember.<your-tailnet>.ts.net` on any device that has Tailscale installed. On the host machine itself, `http://localhost:3000` also works.
 
 **Install on iPhone:** open the URL in Safari, then **Share → Add to Home Screen**. It launches full-screen like a native app.
 
