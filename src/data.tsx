@@ -116,6 +116,7 @@ export type SheetState =
   | { type: 'football' }
   | { type: 'summary'; sessionId: string }
   | { type: 'soreness' }
+  | { type: 'history'; exerciseId: number }
   | null;
 
 interface UiActions {
@@ -124,6 +125,7 @@ interface UiActions {
   openFootball(): void;
   openSummary(sessionId: string): void;
   openSoreness(): void;
+  openHistory(exerciseId: number): void;
   notify(message: string, tone?: 'default' | 'pb' | 'error'): void;
 }
 
