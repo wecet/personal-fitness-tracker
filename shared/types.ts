@@ -1,17 +1,26 @@
 import type { MuscleId } from './muscles.ts';
 
+/** How an exercise is measured: reps × kg, bodyweight reps (optional added kg), or a timed hold. */
+export type ExerciseMetric = 'weight' | 'bodyweight' | 'time';
+
+export const EXERCISE_METRICS: ExerciseMetric[] = ['weight', 'bodyweight', 'time'];
+
 export interface Exercise {
   id: number;
   name: string;
   muscle: MuscleId;
   secondary: MuscleId[];
+  metric: ExerciseMetric;
   custom: boolean;
 }
 
 export interface WorkoutSet {
+  /** 0 for timed sets. */
   reps: number;
-  /** Kilograms. 0 for bodyweight. */
+  /** Kilograms (added weight for bodyweight/timed exercises). */
   weight: number;
+  /** Duration of a timed set. */
+  seconds?: number;
 }
 
 export interface Entry {
@@ -39,4 +48,5 @@ export interface NewExercise {
   name: string;
   muscle: MuscleId;
   secondary?: MuscleId[];
+  metric?: ExerciseMetric;
 }

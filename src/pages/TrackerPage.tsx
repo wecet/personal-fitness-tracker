@@ -3,7 +3,7 @@ import { MUSCLE_BY_ID } from '../../shared/muscles.ts';
 import type { Entry } from '../../shared/types.ts';
 import { Icon } from '../components/Icon.tsx';
 import { useData, useUi } from '../data.tsx';
-import { dateKey, formatSets, parseDateKey, weekdayHabits, WEEKDAYS } from '../lib/stats.ts';
+import { dateKey, formatSet, formatSets, parseDateKey, weekdayHabits, WEEKDAYS } from '../lib/stats.ts';
 
 const DAY = 86_400_000;
 const WEEKS_SHOWN = 53;
@@ -135,7 +135,8 @@ function DayDetail({ dayKey, entries }: { dayKey: string; entries: Entry[] }) {
   const muscles = [...new Set(entries.map((e) => exById.get(e.exerciseId)?.muscle).filter((m) => m !== undefined))];
 
   async function remove(e: Entry) {
-    if (!confirm(`Delete ${exById.get(e.exerciseId)?.name} (${formatSets(e.sets)})?`)) return;
+    const ex = exById.get(e.exerciseId);
+    if (!confirm(`Delete ${ex?.name} (${formatSets(e.sets, ex?.metric ?? 'weight')})?`)) return;
     try {
       await deleteEntry(e.id);
     } catch (err) {
@@ -165,7 +166,7 @@ function DayDetail({ dayKey, entries }: { dayKey: string; entries: Entry[] }) {
                     {prEntryIds.has(e.id) && <span className="pb-badge small">PB</span>}
                     <div className="set-list">
                       {e.sets.map((s, i) => (
-                        <span key={i}>{s.weight > 0 ? `${s.reps} × ${s.weight} kg` : `${s.reps} reps`}</span>
+                        <span key={i}>{formatSet(s, ex?.metric ?? 'weight')}</span>
                       ))}
                     </div>
                   </div>
