@@ -49,6 +49,21 @@ export interface WorkoutSession {
   /** Session effort 1–10, asked for when finishing. */
   rpe: number | null;
   note: string | null;
+  /** Set when the workout was started from a routine. */
+  routineId?: string | null;
+}
+
+export interface RoutineItem {
+  exerciseId: number;
+  /** Planned sets; refreshed from what you did each time the routine is finished. */
+  sets: WorkoutSet[];
+}
+
+export interface Routine {
+  id: string;
+  name: string;
+  items: RoutineItem[];
+  createdAt: string;
 }
 
 export type FootballType = 'match' | 'training' | 'futsal' | 'drills';
@@ -96,11 +111,12 @@ export interface RecordMap {
   settings: Settings;
   session: WorkoutSession;
   soreness: Soreness;
+  routine: Routine;
 }
 
 export type RecordKind = keyof RecordMap;
 
-const KINDS: Record<RecordKind, true> = { entry: true, activity: true, settings: true, session: true, soreness: true };
+const KINDS: Record<RecordKind, true> = { entry: true, activity: true, settings: true, session: true, soreness: true, routine: true };
 export const RECORD_KINDS = Object.keys(KINDS) as RecordKind[];
 
 export type Records = { [K in RecordKind]: RecordMap[K][] };

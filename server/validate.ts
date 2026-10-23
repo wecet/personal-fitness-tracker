@@ -86,7 +86,20 @@ export function makeValidators(getExercise: (id: number) => Exercise | undefined
         endedAt: r.endedAt == null ? null : isoDate(r.endedAt, 'endedAt'),
         rpe: r.rpe == null ? null : int(r.rpe, 'rpe', 1, 10),
         note: note(r.note),
+        routineId: r.routineId == null ? null : recordId(r.routineId),
       };
+    },
+    routine(raw) {
+      const r = object(raw);
+      const name = typeof r.name === 'string' ? r.name.trim().slice(0, 60) : '';
+      if (!name) fail('Routine name is required');
+      if (!Array.isArray(r.items) || r.items.length === 0 || r.items.length > 30) fail('A routine needs 1–30 exercises');
+      const items = (r.items as unknown[]).map((raw) => {
+        const item = object(raw);
+        const exercise = getExercise(Number(item.exerciseId)) ?? fail('Unknown exercise');
+        return { exerciseId: exercise.id, sets: sets(item.sets, exercise.metric) };
+      });
+      return { id: recordId(r.id), name, items, createdAt: isoDate(r.createdAt, 'createdAt') };
     },
     soreness(raw) {
       const r = object(raw);
