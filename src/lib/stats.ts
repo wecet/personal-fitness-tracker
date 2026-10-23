@@ -1,22 +1,13 @@
 import { MUSCLES, MUSCLE_BY_ID, type MuscleCategory, type MuscleId } from '../../shared/muscles.ts';
-import type { Entry, Exercise, ExerciseMetric, WorkoutSet } from '../../shared/types.ts';
+import type { Activity, Entry, Exercise, ExerciseMetric, Settings, WorkoutSet } from '../../shared/types.ts';
+import { dateKey } from './dates.ts';
+import { activityIntensity, FOOTBALL_MUSCLES, footballContext } from './football.ts';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 export const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-/** Local-time YYYY-MM-DD. */
-export function dateKey(d: Date | string): string {
-  const date = typeof d === 'string' ? new Date(d) : d;
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${date.getFullYear()}-${m}-${day}`;
-}
-
-export function parseDateKey(key: string): Date {
-  const [y, m, d] = key.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
+export { dateKey, parseDateKey } from './dates.ts';
 
 // ---------- formatting ----------
 
@@ -103,16 +94,17 @@ export interface MuscleFatigue {
 
 const SECONDARY_INTENSITY = 0.5;
 
-export function muscleFatigue(entries: Entry[], exById: Map<number, Exercise>, now: number) {
+export function muscleFatigue(entries: Entry[], exById: Map<number, Exercise>, now: number, activities: Activity[] = []) {
   const out = new Map<MuscleId, MuscleFatigue>();
-  const hit = (muscle: MuscleId, at: number, intensity: number) => {
-    const recovery = MUSCLE_BY_ID[muscle].recoveryHours * HOUR;
+  /** `scale` shortens the rest period for lighter work; `needsRest` marks work that should block heavy training. */
+  const hit = (muscle: MuscleId, at: number, intensity: number, needsRest: boolean, scale = 1) => {
+    const recovery = MUSCLE_BY_ID[muscle].recoveryHours * HOUR * scale;
     const remaining = 1 - (now - at) / recovery;
     if (remaining <= 0 || at > now + HOUR) return;
     const prev = out.get(muscle) ?? { level: 0, hoursLeft: 0 };
     out.set(muscle, {
       level: Math.max(prev.level, Math.min(1, remaining * intensity)),
-      hoursLeft: intensity === 1 ? Math.max(prev.hoursLeft, (remaining * recovery) / HOUR) : prev.hoursLeft,
+      hoursLeft: needsRest ? Math.max(prev.hoursLeft, (remaining * recovery) / HOUR) : prev.hoursLeft,
     });
   };
   for (const e of entries) {
@@ -120,8 +112,14 @@ export function muscleFatigue(entries: Entry[], exById: Map<number, Exercise>, n
     if (!ex) continue;
     const at = Date.parse(e.performedAt);
     if (now - at > 4 * DAY) continue;
-    hit(ex.muscle, at, 1);
-    for (const m of ex.secondary) hit(m, at, SECONDARY_INTENSITY);
+    hit(ex.muscle, at, 1, true);
+    for (const m of ex.secondary) hit(m, at, SECONDARY_INTENSITY, false);
+  }
+  for (const a of activities) {
+    const at = Date.parse(a.performedAt);
+    if (now - at > 4 * DAY) continue;
+    const intensity = activityIntensity(a);
+    for (const [m, share] of FOOTBALL_MUSCLES) hit(m, at, intensity * share, intensity * share >= 0.6, intensity);
   }
   return out;
 }
@@ -146,6 +144,8 @@ export interface WeekdayHabit {
   occurrences: number;
   focus: string | null;
   topMuscles: MuscleId[];
+  /** Football sessions on this weekday within the window. */
+  football: number;
 }
 
 function focusLabel(sets: Map<MuscleId, number>): string | null {
@@ -162,9 +162,19 @@ function focusLabel(sets: Map<MuscleId, number>): string | null {
   return 'Full body';
 }
 
-export function weekdayHabits(entries: Entry[], exById: Map<number, Exercise>, now: Date, weeks = 12): WeekdayHabit[] {
+export function weekdayHabits(
+  entries: Entry[],
+  exById: Map<number, Exercise>,
+  now: Date,
+  activities: Activity[] = [],
+  weeks = 12,
+): WeekdayHabit[] {
   const since = now.getTime() - weeks * 7 * DAY;
-  const days = Array.from({ length: 7 }, () => ({ dates: new Set<string>(), sets: new Map<MuscleId, number>() }));
+  const days = Array.from({ length: 7 }, () => ({ dates: new Set<string>(), sets: new Map<MuscleId, number>(), football: new Set<string>() }));
+  for (const a of activities) {
+    const at = new Date(a.performedAt);
+    if (at.getTime() >= since && at.getTime() <= now.getTime()) days[at.getDay()].football.add(dateKey(at));
+  }
   for (const e of entries) {
     const at = new Date(e.performedAt);
     const ex = exById.get(e.exerciseId);
@@ -178,6 +188,7 @@ export function weekdayHabits(entries: Entry[], exById: Map<number, Exercise>, n
     return {
       weekday,
       sessions: d.dates.size,
+      football: d.football.size,
       occurrences: weeks,
       focus: focusLabel(d.sets),
       topMuscles: [...d.sets]
@@ -195,9 +206,21 @@ export interface Recommendation {
   weekday: string;
   headline: string;
   detail: string;
+  /** Match-day guidance, when a football schedule applies today. */
+  football: { label: string; note: string } | null;
   muscles: MuscleId[];
   recovering: MuscleId[];
   exercises: Exercise[];
+}
+
+export interface RecommendInput {
+  entries: Entry[];
+  activities: Activity[];
+  exercises: Exercise[];
+  exById: Map<number, Exercise>;
+  fatigue: Map<MuscleId, MuscleFatigue>;
+  settings: Settings;
+  now: Date;
 }
 
 function lastTrained(entries: Entry[], exById: Map<number, Exercise>) {
@@ -218,16 +241,33 @@ export function exercisesFor(muscle: MuscleId, exercises: Exercise[], entries: E
     .sort((a, b) => (uses.get(b.id) ?? 0) - (uses.get(a.id) ?? 0) || a.id - b.id);
 }
 
-export function recommend(
-  entries: Entry[],
-  exercises: Exercise[],
-  exById: Map<number, Exercise>,
-  fatigue: Map<MuscleId, MuscleFatigue>,
-  now: Date,
-): Recommendation {
+/** The category that has gone longest without training, among those allowed. */
+function mostRested(entries: Entry[], exById: Map<number, Exercise>, now: Date, cats: MuscleCategory[]) {
+  const last = lastTrained(entries, exById);
+  const rest = (m: MuscleId) => now.getTime() - (last.get(m) ?? 0);
+  const avgRest = (c: MuscleCategory) => {
+    const ms = MUSCLES.filter((m) => m.category === c);
+    return ms.reduce((sum, m) => sum + Math.min(rest(m.id), 30 * DAY), 0) / ms.length;
+  };
+  const cat = [...cats].sort((a, b) => avgRest(b) - avgRest(a))[0];
+  const muscles = MUSCLES.filter((m) => m.category === cat)
+    .sort((a, b) => rest(b.id) - rest(a.id))
+    .slice(0, 4)
+    .map((m) => m.id);
+  return { cat, muscles };
+}
+
+export function recommend({ entries, activities, exercises, exById, fatigue, settings, now }: RecommendInput): Recommendation {
   const weekday = WEEKDAYS[now.getDay()];
-  const habit = weekdayHabits(entries, exById, now)[now.getDay()];
+  const habit = weekdayHabits(entries, exById, now, activities)[now.getDay()];
   const totalDays = new Set(entries.map((e) => dateKey(e.performedAt))).size;
+  const ctx = footballContext(now, settings, activities);
+  const football = ctx.label && ctx.note ? { label: ctx.label, note: ctx.note } : null;
+  const isLegs = (m: MuscleId) => MUSCLE_BY_ID[m].category === 'legs';
+
+  if (ctx.restDay) {
+    return { weekday, headline: 'Match day ⚽', detail: 'No lifting today — good luck out there.', football, muscles: [], recovering: [], exercises: [] };
+  }
 
   let headline: string;
   let detail: string;
@@ -239,27 +279,27 @@ export function recommend(
     targets = habit.topMuscles;
   } else {
     // No pattern for today: pick the category that has been resting longest.
-    const last = lastTrained(entries, exById);
-    const rest = (m: MuscleId) => now.getTime() - (last.get(m) ?? 0);
-    const cats: MuscleCategory[] = ['legs', 'push', 'pull'];
-    const avgRest = (c: MuscleCategory) => {
-      const ms = MUSCLES.filter((m) => m.category === c);
-      return ms.reduce((sum, m) => sum + Math.min(rest(m.id), 30 * DAY), 0) / ms.length;
-    };
-    const cat = cats.sort((a, b) => avgRest(b) - avgRest(a))[0];
-    targets = MUSCLES.filter((m) => m.category === cat)
-      .sort((a, b) => rest(b.id) - rest(a.id))
-      .slice(0, 4)
-      .map((m) => m.id);
-    headline = `How about a ${CATEGORY_LABEL[cat].toLowerCase()} day?`;
+    const cats: MuscleCategory[] = ctx.avoidLegs ? ['push', 'pull'] : ctx.legsWindow ? ['legs'] : ['legs', 'push', 'pull'];
+    const pick = mostRested(entries, exById, now, cats);
+    targets = pick.muscles;
+    headline = `How about a ${CATEGORY_LABEL[pick.cat].toLowerCase()} day?`;
     detail =
       totalDays < 3
         ? 'Log a few more workouts and I’ll learn your weekly routine.'
         : `No regular pattern on ${weekday}s yet — these muscles have rested the longest.`;
   }
 
+  if (ctx.avoidLegs && targets.some(isLegs)) {
+    targets = targets.filter((m) => !isLegs(m));
+    if (targets.length === 0) {
+      const pick = mostRested(entries, exById, now, ['push', 'pull']);
+      targets = pick.muscles;
+      headline = `Swap legs for ${CATEGORY_LABEL[pick.cat].toLowerCase()} today`;
+    }
+  }
+
   const muscles = targets.filter((m) => isRecovered(fatigue.get(m)));
   const recovering = targets.filter((m) => !isRecovered(fatigue.get(m)));
   const suggested = muscles.slice(0, 4).flatMap((m) => exercisesFor(m, exercises, entries).slice(0, 2));
-  return { weekday, headline, detail, muscles, recovering, exercises: suggested };
+  return { weekday, headline, detail, football, muscles, recovering, exercises: suggested };
 }
