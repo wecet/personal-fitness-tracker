@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api } from './api.ts';
-import { beats, bestSet, muscleFatigue, personalBests, type MuscleFatigue, type PersonalBest } from './lib/stats.ts';
+import { beats, bestSet, muscleFatigue, personalBests, recommend, type MuscleFatigue, type PersonalBest, type Recommendation } from './lib/stats.ts';
 import { newId, store } from './lib/store.ts';
 import type { MuscleId } from '../shared/muscles.ts';
-import type { AppState, Entry, Exercise, NewExercise, RecordKind, RecordMap, Records } from '../shared/types.ts';
+import { DEFAULT_SETTINGS, type Activity, type AppState, type Entry, type Exercise, type NewExercise, type RecordKind, type RecordMap, type Records, type Settings } from '../shared/types.ts';
 
 export type NewEntry = Omit<Entry, 'id' | 'note'> & { note?: string | null };
 
@@ -12,6 +12,10 @@ interface AppData {
   records: Records;
   /** Sorted oldest → newest. */
   entries: Entry[];
+  /** Football sessions, sorted oldest → newest. */
+  activities: Activity[];
+  settings: Settings;
+  rec: Recommendation;
   exById: Map<number, Exercise>;
   pbs: Map<number, PersonalBest>;
   prEntryIds: Set<string>;
@@ -46,15 +50,23 @@ function useNow(intervalMs = 60_000) {
   return now;
 }
 
-const byPerformedAt = (a: Entry, b: Entry) => a.performedAt.localeCompare(b.performedAt);
+const byPerformedAt = (a: { performedAt: string }, b: { performedAt: string }) => a.performedAt.localeCompare(b.performedAt);
 
 export function DataProvider({ state, children }: { state: AppState; children: ReactNode }) {
-  const now = useNow();
   const { exercises, records } = state;
+  const tick = useNow();
+  // Also refresh on every change so a record logged mid-minute never looks like it's in the future.
+  const now = useMemo(() => Math.max(tick, Date.now()), [tick, records]);
   const entries = useMemo(() => [...records.entry].sort(byPerformedAt), [records.entry]);
   const exById = useMemo(() => new Map(exercises.map((e) => [e.id, e])), [exercises]);
   const { best: pbs, prEntryIds } = useMemo(() => personalBests(entries, exById), [entries, exById]);
-  const fatigue = useMemo(() => muscleFatigue(entries, exById, now), [entries, exById, now]);
+  const activities = useMemo(() => [...records.activity].sort(byPerformedAt), [records.activity]);
+  const settings = records.settings[0] ?? DEFAULT_SETTINGS;
+  const fatigue = useMemo(() => muscleFatigue(entries, exById, now, activities), [entries, exById, now, activities]);
+  const rec = useMemo(
+    () => recommend({ entries, activities, exercises, exById, fatigue, settings, now: new Date(now) }),
+    [entries, activities, exercises, exById, fatigue, settings, now],
+  );
 
   const put = useCallback(<K extends RecordKind>(kind: K, record: RecordMap[K]) => {
     store.enqueue({ op: 'put', kind, record } as never);
@@ -80,19 +92,20 @@ export function DataProvider({ state, children }: { state: AppState; children: R
   }, []);
 
   const value = useMemo(
-    () => ({ exercises, records, entries, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise }),
-    [exercises, records, entries, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise],
+    () => ({ exercises, records, entries, activities, settings, rec, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise }),
+    [exercises, records, entries, activities, settings, rec, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 // ---------- UI actions shared across pages ----------
 
-export type SheetState = { type: 'muscle'; muscle: MuscleId; exerciseId?: number } | { type: 'plan' } | null;
+export type SheetState = { type: 'muscle'; muscle: MuscleId; exerciseId?: number } | { type: 'plan' } | { type: 'football' } | null;
 
 interface UiActions {
   openMuscle(muscle: MuscleId, exerciseId?: number): void;
   openPlan(): void;
+  openFootball(): void;
   notify(message: string, tone?: 'default' | 'pb' | 'error'): void;
 }
 
