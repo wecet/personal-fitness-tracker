@@ -14,6 +14,7 @@ import { DataProvider, UiCtx, type SheetState } from './data.tsx';
 import { dateKey } from './lib/stats.ts';
 import { store, type SyncStatus } from './lib/store.ts';
 import { BodyPage } from './pages/BodyPage.tsx';
+import { LoadPage } from './pages/LoadPage.tsx';
 import { RecordsPage } from './pages/RecordsPage.tsx';
 import { SettingsPage } from './pages/SettingsPage.tsx';
 import { TrackerPage } from './pages/TrackerPage.tsx';
@@ -130,6 +131,7 @@ export function App() {
             <SessionProvider>
             {route === 'body' && <BodyPage />}
             {route === 'tracker' && <TrackerPage />}
+            {route === 'load' && <LoadPage />}
             {route === 'records' && <RecordsPage />}
             {route === 'settings' && <SettingsPage />}
             {sheet?.type === 'muscle' && (

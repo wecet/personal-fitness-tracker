@@ -36,7 +36,7 @@ function useMode() {
 }
 
 export function BodyPage() {
-  const { fatigue, rec, activeSession, entries, exById, now } = useData();
+  const { fatigue, rec, activeSession, entries, exById, now, load } = useData();
   const { openMuscle, openPlan, openFootball, openSoreness } = useUi();
   const { startWorkout } = useSession();
   const [mode, setMode] = useMode();
@@ -79,6 +79,16 @@ export function BodyPage() {
         </span>
         <Icon name="chevron" />
       </button>
+
+      {(load.zone === 'spike' || load.zone === 'caution') && (
+        <a className={`load-warning ${load.zone}`} href="#/load">
+          <span aria-hidden="true">{load.zone === 'spike' ? '⚠' : '!'}</span>
+          <span>
+            <strong>{load.zone === 'spike' ? 'Load spike' : 'Load climbing'}</strong> — this week is {load.ratio!.toFixed(1)}× your 4-week average.
+            {load.zone === 'spike' ? ' Ease off to cut injury risk.' : ' Hold steady.'}
+          </span>
+        </a>
+      )}
 
       <div className="quick-actions">
         {!activeSession && (
