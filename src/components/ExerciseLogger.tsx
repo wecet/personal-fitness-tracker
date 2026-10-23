@@ -5,6 +5,7 @@ import type { Exercise, ExerciseMetric, WorkoutSet } from '../../shared/types.ts
 import { suggestNext } from '../lib/progression.ts';
 import { useSession } from '../session.tsx';
 import { Icon } from './Icon.tsx';
+import { PlateSheet } from './PlateSheet.tsx';
 
 interface SetDraft {
   reps: string;
@@ -64,6 +65,7 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
   const suggestion = last ? suggestNext(last.sets, metric) : null;
   const [applied, setApplied] = useState(false);
   const [done, setDone] = useState<Set<number>>(new Set());
+  const [plates, setPlates] = useState(false);
 
   useEffect(() => {
     if (!stopwatch) return;
@@ -172,12 +174,18 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
         <button type="button" className="btn ghost" onClick={() => setSets((all) => [...all, { ...all[all.length - 1] }])}>
           <Icon name="plus" size={16} /> Add set
         </button>
+        {metric === 'weight' && (
+          <button type="button" className="icon-btn" aria-label="Plate calculator" onClick={() => setPlates(true)}>
+            <Icon name="plates" />
+          </button>
+        )}
         <input type="date" className="date-input" value={date} max={today} onChange={(e) => setDate(e.target.value || today)} aria-label="Workout date" />
       </div>
       {beatsPb && <p className="pb-hint">This beats your PB of {formatPb(pb!, metric)} 🔥</p>}
       <button className="btn primary block" disabled={!parsed || !!stopwatch}>
         {`Save ${sets.length} set${sets.length === 1 ? '' : 's'}`}
       </button>
+      {plates && <PlateSheet initialKg={top?.weight || undefined} onClose={() => setPlates(false)} />}
     </form>
   );
 }

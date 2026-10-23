@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Brand } from './Brand.tsx';
 import { Icon, type IconName } from './Icon.tsx';
+import { PlateSheet } from './PlateSheet.tsx';
 
 export type Route = 'body' | 'tracker' | 'routines' | 'load' | 'records' | 'settings';
 
@@ -14,6 +15,7 @@ export const ROUTES: { id: Route; label: string; icon: IconName }[] = [
 ];
 
 export function Drawer({ open, route, onClose }: { open: boolean; route: Route; onClose: () => void }) {
+  const [plates, setPlates] = useState(false);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -38,10 +40,14 @@ export function Drawer({ open, route, onClose }: { open: boolean; route: Route; 
             </li>
           ))}
         </ul>
+        <button className="drawer-tool" onClick={() => setPlates(true)}>
+          <Icon name="plates" /> Plate calculator
+        </button>
         <a className="drawer-foot" href="/api/export" download>
           <Icon name="download" size={18} /> Export backup
         </a>
       </nav>
+      {plates && <PlateSheet onClose={() => setPlates(false)} />}
     </>
   );
 }
