@@ -109,6 +109,8 @@ main { max-width: 980px; margin: 0 auto; padding: 0 var(--gutter) calc(var(--saf
 .drawer li a:hover, .drawer-foot:hover { background: var(--surface-2); }
 .drawer li a.active { background: color-mix(in srgb, var(--coral) 16%, transparent); color: var(--coral); }
 .drawer-foot { margin-top: auto; color: var(--muted); font-size: 14px; }
+.drawer-tool { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; font-weight: 500; margin-top: 12px; border-top: 1px solid var(--border); border-radius: 0; text-align: left; }
+.drawer-tool:hover { background: var(--surface-2); }
 
 /* ---------- shared pieces ---------- */
 
@@ -533,3 +535,22 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .search-results { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
 .search-results button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); text-align: left; }
 .search-results button span:first-child { flex: 1; font-weight: 600; }
+
+/* ---------- plate calculator ---------- */
+
+.day-picker.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.plates-result { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; background: var(--surface-2); }
+.barbell { width: 100%; height: auto; }
+.bar-shaft { fill: #8d9097; }
+.bar-collar { fill: #b7b9bf; }
+.plate { stroke: var(--surface-2); stroke-width: 1; }
+.plate-25 { fill: #d64545; background: #d64545; }
+.plate-20 { fill: #3a76c4; background: #3a76c4; }
+.plate-15 { fill: #e0b83a; background: #e0b83a; }
+.plate-10 { fill: #3f9a5a; background: #3f9a5a; }
+.plate-5 { fill: #e9e9e6; background: #e9e9e6; }
+.plate-2_5 { fill: #a63a3a; background: #a63a3a; }
+.plate-1_25 { fill: #a6a9ae; background: #a6a9ae; }
+.plate-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.plate-list .chip { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
