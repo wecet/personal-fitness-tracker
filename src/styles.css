@@ -360,6 +360,13 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .session-info .pill { margin-left: auto; }
 .btn.finish { height: 38px; padding: 0 14px; flex-shrink: 0; }
 .logger-hint { margin: 0; }
+.suggestion {
+  display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; border-radius: 10px; font-size: 13.5px;
+  background: color-mix(in srgb, var(--coral) 10%, transparent); border: 1px solid color-mix(in srgb, var(--coral) 25%, transparent);
+}
+.suggestion > span:nth-child(2) { flex: 1; }
+.suggestion-icon { color: var(--coral); font-weight: 800; }
+.plan-list .next { color: var(--coral); font-weight: 600; }
 .set-done { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--border); font-size: 13px; color: var(--muted); }
 .set-done.done { background: var(--coral); border-color: var(--coral); color: var(--coral-ink); }
 .summary-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
