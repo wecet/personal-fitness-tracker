@@ -3,7 +3,7 @@ import { Brand } from './Brand.tsx';
 import { Icon, type IconName } from './Icon.tsx';
 import { PlateSheet } from './PlateSheet.tsx';
 
-export type Route = 'body' | 'tracker' | 'routines' | 'load' | 'records' | 'settings';
+export type Route = 'body' | 'tracker' | 'routines' | 'load' | 'records' | 'bodyweight' | 'settings';
 
 export const ROUTES: { id: Route; label: string; icon: IconName }[] = [
   { id: 'body', label: 'Body Map', icon: 'body' },
@@ -11,6 +11,7 @@ export const ROUTES: { id: Route; label: string; icon: IconName }[] = [
   { id: 'routines', label: 'Routines', icon: 'list' },
   { id: 'load', label: 'Training Load', icon: 'chart' },
   { id: 'records', label: 'Personal Bests', icon: 'trophy' },
+  { id: 'bodyweight', label: 'Bodyweight', icon: 'scale' },
   { id: 'settings', label: 'Settings', icon: 'settings' },
 ];
 

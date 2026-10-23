@@ -15,6 +15,7 @@ import { DataProvider, UiCtx, type SheetState, type ToastAction } from './data.t
 import { dateKey } from './lib/stats.ts';
 import { store, type SyncStatus } from './lib/store.ts';
 import { BodyPage } from './pages/BodyPage.tsx';
+import { BodyweightPage } from './pages/BodyweightPage.tsx';
 import { LoadPage } from './pages/LoadPage.tsx';
 import { RecordsPage } from './pages/RecordsPage.tsx';
 import { RoutinesPage } from './pages/RoutinesPage.tsx';
@@ -137,6 +138,7 @@ export function App() {
             {route === 'routines' && <RoutinesPage />}
             {route === 'load' && <LoadPage />}
             {route === 'records' && <RecordsPage />}
+            {route === 'bodyweight' && <BodyweightPage />}
             {route === 'settings' && <SettingsPage />}
             {sheet?.type === 'muscle' && (
               <MuscleSheet key={`${sheet.muscle}-${sheet.exerciseId}`} muscle={sheet.muscle} exerciseId={sheet.exerciseId} onClose={closeSheet} />
