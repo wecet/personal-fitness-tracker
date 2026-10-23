@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api } from './api.ts';
-import { bestSet, muscleFatigue, personalBests, type MuscleFatigue, type PersonalBest } from './lib/stats.ts';
+import { beats, bestSet, muscleFatigue, personalBests, type MuscleFatigue, type PersonalBest } from './lib/stats.ts';
 import type { MuscleId } from '../shared/muscles.ts';
 import type { AppState, Entry, Exercise, NewEntry, NewExercise } from '../shared/types.ts';
 
@@ -48,19 +48,19 @@ export function DataProvider({ state, setState, children }: {
   const now = useNow();
   const { exercises, entries } = state;
   const exById = useMemo(() => new Map(exercises.map((e) => [e.id, e])), [exercises]);
-  const { best: pbs, prEntryIds } = useMemo(() => personalBests(entries), [entries]);
+  const { best: pbs, prEntryIds } = useMemo(() => personalBests(entries, exById), [entries, exById]);
   const fatigue = useMemo(() => muscleFatigue(entries, exById, now), [entries, exById, now]);
 
   const addEntry = useCallback(
     async (input: NewEntry) => {
       const entry = await api.addEntry(input);
       const prev = pbs.get(entry.exerciseId);
-      const top = bestSet(entry.sets);
-      const isPb = !!prev && (top.weight > prev.weight || (top.weight === prev.weight && top.reps > prev.reps));
+      const metric = exById.get(entry.exerciseId)?.metric ?? 'weight';
+      const isPb = !!prev && beats(bestSet(entry.sets, metric), prev, metric);
       setState((s) => s && { ...s, entries: [...s.entries, entry].sort((a, b) => a.performedAt.localeCompare(b.performedAt)) });
       return { entry, isPb };
     },
-    [pbs, setState],
+    [pbs, exById, setState],
   );
 
   const deleteEntry = useCallback(

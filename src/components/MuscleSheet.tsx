@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { MUSCLE_BY_ID, type MuscleId } from '../../shared/muscles.ts';
-import type { Exercise } from '../../shared/types.ts';
+import { EXERCISE_METRICS, type Exercise, type ExerciseMetric } from '../../shared/types.ts';
 import { useData, useUi } from '../data.tsx';
 import { exercisesFor, formatPb, formatSets, recoveryLabel } from '../lib/stats.ts';
 import { ExerciseLogger } from './ExerciseLogger.tsx';
 import { Icon } from './Icon.tsx';
 import { Sheet } from './Sheet.tsx';
+
+const METRIC_LABEL: Record<ExerciseMetric, string> = { weight: 'Weight × reps', bodyweight: 'Bodyweight', time: 'Timed' };
 
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
@@ -18,7 +20,7 @@ function ExerciseRow({ exercise, open, onToggle }: { exercise: Exercise; open: b
     <li className={`exercise ${open ? 'open' : ''}`}>
       <button className="exercise-head" onClick={onToggle} aria-expanded={open}>
         <span className="exercise-name">{exercise.name}</span>
-        {pb ? <span className="pb-badge">PB {formatPb(pb)}</span> : <span className="muted small">No PB yet</span>}
+        {pb ? <span className="pb-badge">PB {formatPb(pb, exercise.metric)}</span> : <span className="muted small">No PB yet</span>}
         <span className="chevron"><Icon name="chevron" size={18} /></span>
       </button>
       {open && (
@@ -29,7 +31,7 @@ function ExerciseRow({ exercise, open, onToggle }: { exercise: Exercise; open: b
               {history.map((e) => (
                 <li key={e.id}>
                   <span className="muted">{shortDate(e.performedAt)}</span>
-                  <span>{formatSets(e.sets)}</span>
+                  <span>{formatSets(e.sets, exercise.metric)}</span>
                 </li>
               ))}
             </ul>
@@ -44,12 +46,13 @@ function AddExercise({ muscle }: { muscle: MuscleId }) {
   const { addExercise } = useData();
   const { notify } = useUi();
   const [name, setName] = useState('');
+  const [metric, setMetric] = useState<ExerciseMetric>('weight');
   const [open, setOpen] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     try {
-      await addExercise({ name, muscle });
+      await addExercise({ name, muscle, metric });
       setName('');
       setOpen(false);
     } catch (err) {
@@ -65,8 +68,17 @@ function AddExercise({ muscle }: { muscle: MuscleId }) {
     );
   return (
     <form className="add-exercise" onSubmit={submit}>
-      <input autoFocus placeholder="Exercise name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
-      <button className="btn primary" disabled={!name.trim()}>Add</button>
+      <div className="add-exercise-row">
+        <input autoFocus placeholder="Exercise name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
+        <button className="btn primary" disabled={!name.trim()}>Add</button>
+      </div>
+      <div className="segmented small" role="radiogroup" aria-label="Measured by">
+        {EXERCISE_METRICS.map((m) => (
+          <button key={m} type="button" role="radio" aria-checked={metric === m} className={metric === m ? 'active' : ''} onClick={() => setMetric(m)}>
+            {METRIC_LABEL[m]}
+          </button>
+        ))}
+      </div>
     </form>
   );
 }
