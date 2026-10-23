@@ -92,7 +92,7 @@ export function BodyPage() {
 
       <div className="quick-actions">
         {!activeSession && (
-          <button className="quick coral" onClick={startWorkout}>
+          <button className="quick coral" onClick={() => startWorkout()}>
             <Icon name="timer" size={18} /> Workout
           </button>
         )}

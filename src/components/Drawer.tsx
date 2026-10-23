@@ -2,11 +2,12 @@ import { useEffect } from 'react';
 import { Brand } from './Brand.tsx';
 import { Icon, type IconName } from './Icon.tsx';
 
-export type Route = 'body' | 'tracker' | 'load' | 'records' | 'settings';
+export type Route = 'body' | 'tracker' | 'routines' | 'load' | 'records' | 'settings';
 
 export const ROUTES: { id: Route; label: string; icon: IconName }[] = [
   { id: 'body', label: 'Body Map', icon: 'body' },
   { id: 'tracker', label: 'Tracker', icon: 'calendar' },
+  { id: 'routines', label: 'Routines', icon: 'list' },
   { id: 'load', label: 'Training Load', icon: 'chart' },
   { id: 'records', label: 'Personal Bests', icon: 'trophy' },
   { id: 'settings', label: 'Settings', icon: 'settings' },
