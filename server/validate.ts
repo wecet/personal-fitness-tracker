@@ -89,6 +89,13 @@ export function makeValidators(getExercise: (id: number) => Exercise | undefined
         routineId: r.routineId == null ? null : recordId(r.routineId),
       };
     },
+    bodyweight(raw) {
+      const r = object(raw);
+      const date = typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : fail('date must be YYYY-MM-DD');
+      const kg = Number(r.kg);
+      if (!Number.isFinite(kg) || kg < 20 || kg > 400) fail('kg must be 20–400');
+      return { id: recordId(r.id), date, kg: Math.round(kg * 10) / 10 };
+    },
     routine(raw) {
       const r = object(raw);
       const name = typeof r.name === 'string' ? r.name.trim().slice(0, 60) : '';

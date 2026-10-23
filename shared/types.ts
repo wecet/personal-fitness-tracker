@@ -101,6 +101,14 @@ export interface Soreness {
   muscles: Partial<Record<MuscleId, SorenessLevel>>;
 }
 
+/** One weigh-in per day (id "bw-YYYY-MM-DD"). */
+export interface BodyweightLog {
+  id: string;
+  /** Local date, YYYY-MM-DD. */
+  date: string;
+  kg: number;
+}
+
 /**
  * Every user record kind. Records carry a client-generated string id so they
  * can be created offline and synced later; a put with an existing id overwrites.
@@ -112,11 +120,12 @@ export interface RecordMap {
   session: WorkoutSession;
   soreness: Soreness;
   routine: Routine;
+  bodyweight: BodyweightLog;
 }
 
 export type RecordKind = keyof RecordMap;
 
-const KINDS: Record<RecordKind, true> = { entry: true, activity: true, settings: true, session: true, soreness: true, routine: true };
+const KINDS: Record<RecordKind, true> = { entry: true, activity: true, settings: true, session: true, soreness: true, routine: true, bodyweight: true };
 export const RECORD_KINDS = Object.keys(KINDS) as RecordKind[];
 
 export type Records = { [K in RecordKind]: RecordMap[K][] };
