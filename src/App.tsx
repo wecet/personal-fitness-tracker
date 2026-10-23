@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { Brand } from './components/Brand.tsx';
 import { Drawer, ROUTES, type Route } from './components/Drawer.tsx';
 import { Icon } from './components/Icon.tsx';
+import { FootballSheet } from './components/FootballSheet.tsx';
 import { MuscleSheet } from './components/MuscleSheet.tsx';
 import { PlanSheet } from './components/PlanSheet.tsx';
 import { DataProvider, UiCtx, type SheetState } from './data.tsx';
@@ -9,6 +10,7 @@ import { dateKey } from './lib/stats.ts';
 import { store, type SyncStatus } from './lib/store.ts';
 import { BodyPage } from './pages/BodyPage.tsx';
 import { RecordsPage } from './pages/RecordsPage.tsx';
+import { SettingsPage } from './pages/SettingsPage.tsx';
 import { TrackerPage } from './pages/TrackerPage.tsx';
 import type { AppState } from '../shared/types.ts';
 
@@ -36,7 +38,8 @@ function shouldAutoShowPlan(state: AppState) {
     if (localStorage.getItem(PLAN_SEEN_KEY) === today) return false;
     localStorage.setItem(PLAN_SEEN_KEY, today);
   } catch {}
-  return !state.records.entry.some((e) => dateKey(e.performedAt) === today);
+  const { entry, activity } = state.records;
+  return ![...entry, ...activity].some((r) => dateKey(r.performedAt) === today);
 }
 
 function SyncBadge({ status, pending }: { status: SyncStatus; pending: number }) {
@@ -80,6 +83,7 @@ export function App() {
       openMuscle: (muscle: Parameters<typeof MuscleSheet>[0]['muscle'], exerciseId?: number) =>
         setSheet({ type: 'muscle', muscle, exerciseId }),
       openPlan: () => setSheet({ type: 'plan' }),
+      openFootball: () => setSheet({ type: 'football' }),
       notify: (message: string, tone: Toast['tone'] = 'default') => setToast({ id: Date.now(), message, tone }),
     }),
     [],
@@ -118,10 +122,12 @@ export function App() {
             {route === 'body' && <BodyPage />}
             {route === 'tracker' && <TrackerPage />}
             {route === 'records' && <RecordsPage />}
+            {route === 'settings' && <SettingsPage />}
             {sheet?.type === 'muscle' && (
               <MuscleSheet key={`${sheet.muscle}-${sheet.exerciseId}`} muscle={sheet.muscle} exerciseId={sheet.exerciseId} onClose={closeSheet} />
             )}
             {sheet?.type === 'plan' && <PlanSheet onClose={closeSheet} />}
+            {sheet?.type === 'football' && <FootballSheet onClose={closeSheet} />}
           </DataProvider>
         )}
       </main>
