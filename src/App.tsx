@@ -5,17 +5,19 @@ import { Icon } from './components/Icon.tsx';
 import { FootballSheet } from './components/FootballSheet.tsx';
 import { HistorySheet } from './components/HistorySheet.tsx';
 import { MuscleSheet } from './components/MuscleSheet.tsx';
+import { RoutineEditor } from './components/RoutineEditor.tsx';
 import { PlanSheet } from './components/PlanSheet.tsx';
 import { SessionBar } from './components/SessionBar.tsx';
 import { SorenessSheet } from './components/SorenessSheet.tsx';
 import { SummarySheet } from './components/SummarySheet.tsx';
 import { SessionProvider } from './session.tsx';
-import { DataProvider, UiCtx, type SheetState } from './data.tsx';
+import { DataProvider, UiCtx, type SheetState, type ToastAction } from './data.tsx';
 import { dateKey } from './lib/stats.ts';
 import { store, type SyncStatus } from './lib/store.ts';
 import { BodyPage } from './pages/BodyPage.tsx';
 import { LoadPage } from './pages/LoadPage.tsx';
 import { RecordsPage } from './pages/RecordsPage.tsx';
+import { RoutinesPage } from './pages/RoutinesPage.tsx';
 import { SettingsPage } from './pages/SettingsPage.tsx';
 import { TrackerPage } from './pages/TrackerPage.tsx';
 import type { AppState } from '../shared/types.ts';
@@ -62,7 +64,7 @@ function SyncBadge({ status, pending }: { status: SyncStatus; pending: number })
   );
 }
 
-type Toast = { id: number; message: string; tone: 'default' | 'pb' | 'error' };
+type Toast = { id: number; message: string; tone: 'default' | 'pb' | 'error'; action?: ToastAction };
 
 export function App() {
   const route = useRoute();
@@ -80,7 +82,7 @@ export function App() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), toast.tone === 'pb' ? 4500 : 2500);
+    const t = setTimeout(() => setToast(null), toast.action ? 6000 : toast.tone === 'pb' ? 4500 : 2500);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -93,7 +95,8 @@ export function App() {
       openSummary: (sessionId: string) => setSheet({ type: 'summary', sessionId }),
       openSoreness: () => setSheet({ type: 'soreness' }),
       openHistory: (exerciseId: number) => setSheet({ type: 'history', exerciseId }),
-      notify: (message: string, tone: Toast['tone'] = 'default') => setToast({ id: Date.now(), message, tone }),
+      openRoutine: (routineId?: string) => setSheet({ type: 'routine', routineId }),
+      notify: (message: string, tone: Toast['tone'] = 'default', action?: ToastAction) => setToast({ id: Date.now(), message, tone, action }),
     }),
     [],
   );
@@ -131,6 +134,7 @@ export function App() {
             <SessionProvider>
             {route === 'body' && <BodyPage />}
             {route === 'tracker' && <TrackerPage />}
+            {route === 'routines' && <RoutinesPage />}
             {route === 'load' && <LoadPage />}
             {route === 'records' && <RecordsPage />}
             {route === 'settings' && <SettingsPage />}
@@ -139,6 +143,7 @@ export function App() {
             )}
             {sheet?.type === 'plan' && <PlanSheet onClose={closeSheet} />}
             {sheet?.type === 'football' && <FootballSheet onClose={closeSheet} />}
+            {sheet?.type === 'routine' && <RoutineEditor key={sheet.routineId ?? 'new'} routineId={sheet.routineId} onClose={closeSheet} />}
             {sheet?.type === 'history' && <HistorySheet key={sheet.exerciseId} exerciseId={sheet.exerciseId} onClose={closeSheet} />}
             {sheet?.type === 'soreness' && <SorenessSheet onClose={closeSheet} />}
             {sheet?.type === 'summary' && <SummarySheet sessionId={sheet.sessionId} onClose={closeSheet} />}
@@ -149,7 +154,12 @@ export function App() {
       </main>
 
       {toast && (
-        <div key={toast.id} className={`toast ${toast.tone}`} role="status">{toast.message}</div>
+        <div key={toast.id} className={`toast ${toast.tone}`} role="status">
+          {toast.message}
+          {toast.action && (
+            <button className="toast-action" onClick={() => { toast.action!.run(); setToast(null); }}>{toast.action.label}</button>
+          )}
+        </div>
       )}
     </UiCtx.Provider>
   );
