@@ -128,20 +128,15 @@ function MonthCalendar({ byDay, selected, onSelect }: {
 }
 
 function DayDetail({ dayKey, entries }: { dayKey: string; entries: Entry[] }) {
-  const { exById, prEntryIds, deleteEntry } = useData();
-  const { notify, openMuscle } = useUi();
+  const { exById, prEntryIds, remove } = useData();
+  const { openMuscle } = useUi();
   const date = parseDateKey(dayKey);
   const title = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
   const muscles = [...new Set(entries.map((e) => exById.get(e.exerciseId)?.muscle).filter((m) => m !== undefined))];
 
-  async function remove(e: Entry) {
+  function confirmDelete(e: Entry) {
     const ex = exById.get(e.exerciseId);
-    if (!confirm(`Delete ${ex?.name} (${formatSets(e.sets, ex?.metric ?? 'weight')})?`)) return;
-    try {
-      await deleteEntry(e.id);
-    } catch (err) {
-      notify((err as Error).message, 'error');
-    }
+    if (confirm(`Delete ${ex?.name} (${formatSets(e.sets, ex?.metric ?? 'weight')})?`)) remove('entry', e.id);
   }
 
   return (
@@ -170,7 +165,7 @@ function DayDetail({ dayKey, entries }: { dayKey: string; entries: Entry[] }) {
                       ))}
                     </div>
                   </div>
-                  <button className="icon-btn small" onClick={() => remove(e)} aria-label="Delete entry"><Icon name="trash" size={16} /></button>
+                  <button className="icon-btn small" onClick={() => confirmDelete(e)} aria-label="Delete entry"><Icon name="trash" size={16} /></button>
                 </li>
               );
             })}
