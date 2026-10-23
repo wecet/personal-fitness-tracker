@@ -63,7 +63,7 @@ export const formatPb = (pb: PersonalBest, metric: ExerciseMetric) => formatSet(
 
 export interface PersonalBest extends WorkoutSet {
   performedAt: string;
-  entryId: number;
+  entryId: string;
 }
 
 /** Heavier wins; at equal weight, more reps (or a longer hold for timed exercises). */
@@ -79,7 +79,7 @@ export function bestSet(sets: WorkoutSet[], metric: ExerciseMetric): WorkoutSet 
 /** Current PB per exercise, plus the ids of every entry that set a new PB when it was logged. */
 export function personalBests(entries: Entry[], exById: Map<number, Exercise>) {
   const best = new Map<number, PersonalBest>();
-  const prEntryIds = new Set<number>();
+  const prEntryIds = new Set<string>();
   for (const e of [...entries].sort((a, b) => a.performedAt.localeCompare(b.performedAt))) {
     const metric = exById.get(e.exerciseId)?.metric ?? 'weight';
     const top = bestSet(e.sets, metric);

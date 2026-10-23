@@ -56,7 +56,6 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
 
   const [date, setDate] = useState(today);
   const [sets, setSets] = useState<SetDraft[]>(() => (last ? last.sets.map((s) => toDraft(s, metric)) : [blank()]));
-  const [saving, setSaving] = useState(false);
   const [stopwatch, setStopwatch] = useState<{ index: number; startedAt: number } | null>(null);
   const [, tick] = useState(0);
 
@@ -83,20 +82,13 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
     }
   }
 
-  async function submit(e: FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault();
     if (!parsed) return;
-    setSaving(true);
-    try {
-      const at = date === today ? new Date() : new Date(parseDateKey(date).setHours(12));
-      const { isPb } = await addEntry({ exerciseId: exercise.id, performedAt: at.toISOString(), sets: parsed });
-      notify(isPb ? `New PB! ${exercise.name} — ${formatSet(top!, metric)}` : `Saved ${exercise.name}`, isPb ? 'pb' : 'default');
-      onSaved();
-    } catch (err) {
-      notify((err as Error).message, 'error');
-    } finally {
-      setSaving(false);
-    }
+    const at = date === today ? new Date() : new Date(parseDateKey(date).setHours(12));
+    const { isPb } = addEntry({ exerciseId: exercise.id, performedAt: at.toISOString(), sets: parsed });
+    notify(isPb ? `New PB! ${exercise.name} — ${formatSet(top!, metric)}` : `Saved ${exercise.name}`, isPb ? 'pb' : 'default');
+    onSaved();
   }
 
   return (
@@ -146,8 +138,8 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
         <input type="date" className="date-input" value={date} max={today} onChange={(e) => setDate(e.target.value || today)} aria-label="Workout date" />
       </div>
       {beatsPb && <p className="pb-hint">This beats your PB of {formatPb(pb!, metric)} 🔥</p>}
-      <button className="btn primary block" disabled={!parsed || saving || !!stopwatch}>
-        {saving ? 'Saving…' : `Save ${sets.length} set${sets.length === 1 ? '' : 's'}`}
+      <button className="btn primary block" disabled={!parsed || !!stopwatch}>
+        {`Save ${sets.length} set${sets.length === 1 ? '' : 's'}`}
       </button>
     </form>
   );
