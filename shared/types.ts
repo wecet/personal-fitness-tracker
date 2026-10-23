@@ -76,6 +76,16 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = { id: 'settings', matchDays: [6], trainingDays: [2, 5], restSeconds: 90 };
 
+/** 1 = a bit sore, 2 = very sore. */
+export type SorenessLevel = 1 | 2;
+
+/** One check-in per day (id "sore-YYYY-MM-DD"); the latest replaces earlier ones. */
+export interface Soreness {
+  id: string;
+  recordedAt: string;
+  muscles: Partial<Record<MuscleId, SorenessLevel>>;
+}
+
 /**
  * Every user record kind. Records carry a client-generated string id so they
  * can be created offline and synced later; a put with an existing id overwrites.
@@ -85,11 +95,12 @@ export interface RecordMap {
   activity: Activity;
   settings: Settings;
   session: WorkoutSession;
+  soreness: Soreness;
 }
 
 export type RecordKind = keyof RecordMap;
 
-const KINDS: Record<RecordKind, true> = { entry: true, activity: true, settings: true, session: true };
+const KINDS: Record<RecordKind, true> = { entry: true, activity: true, settings: true, session: true, soreness: true };
 export const RECORD_KINDS = Object.keys(KINDS) as RecordKind[];
 
 export type Records = { [K in RecordKind]: RecordMap[K][] };
