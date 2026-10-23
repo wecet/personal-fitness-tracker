@@ -13,6 +13,7 @@ const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, {
 
 function ExerciseRow({ exercise, open, onToggle }: { exercise: Exercise; open: boolean; onToggle: () => void }) {
   const { entries, pbs } = useData();
+  const { openHistory } = useUi();
   const pb = pbs.get(exercise.id);
   const history = entries.filter((e) => e.exerciseId === exercise.id).slice(-3).reverse();
 
@@ -27,6 +28,8 @@ function ExerciseRow({ exercise, open, onToggle }: { exercise: Exercise; open: b
         <div className="exercise-body">
           <ExerciseLogger exercise={exercise} pb={pb} onSaved={onToggle} />
           {history.length > 0 && (
+            <>
+            <button className="link" onClick={() => openHistory(exercise.id)}>Progress chart & full history →</button>
             <ul className="history">
               {history.map((e) => (
                 <li key={e.id}>
@@ -35,6 +38,7 @@ function ExerciseRow({ exercise, open, onToggle }: { exercise: Exercise; open: b
                 </li>
               ))}
             </ul>
+            </>
           )}
         </div>
       )}
