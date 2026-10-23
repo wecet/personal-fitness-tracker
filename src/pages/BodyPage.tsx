@@ -2,12 +2,10 @@ import { MUSCLES } from '../../shared/muscles.ts';
 import { BodyMap } from '../components/BodyMap.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { useData, useUi } from '../data.tsx';
-import { recommend } from '../lib/stats.ts';
 
 export function BodyPage() {
-  const { entries, exercises, exById, fatigue, now } = useData();
-  const { openMuscle, openPlan } = useUi();
-  const rec = recommend(entries, exercises, exById, fatigue, new Date(now));
+  const { fatigue, rec } = useData();
+  const { openMuscle, openPlan, openFootball } = useUi();
   const recovering = MUSCLES.filter((m) => (fatigue.get(m.id)?.hoursLeft ?? 0) > 0).sort(
     (a, b) => fatigue.get(b.id)!.hoursLeft - fatigue.get(a.id)!.hoursLeft,
   );
@@ -17,11 +15,20 @@ export function BodyPage() {
       <button className="today-card" onClick={openPlan}>
         <span className="today-icon"><Icon name="sparkle" /></span>
         <span>
-          <span className="eyebrow">{rec.weekday}</span>
+          <span className="eyebrow">
+            {rec.weekday}
+            {rec.football && <span className="md-tag">{rec.football.label}</span>}
+          </span>
           <strong>{rec.headline}</strong>
         </span>
         <Icon name="chevron" />
       </button>
+
+      <div className="quick-actions">
+        <button className="quick pitch" onClick={openFootball}>
+          <Icon name="ball" size={18} /> Log football
+        </button>
+      </div>
 
       <BodyMap fatigue={fatigue} suggested={rec.muscles} onSelect={(m) => openMuscle(m)} />
 

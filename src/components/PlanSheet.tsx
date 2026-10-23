@@ -1,16 +1,21 @@
 import { MUSCLE_BY_ID } from '../../shared/muscles.ts';
 import { useData, useUi } from '../data.tsx';
-import { formatPb, formatSets, recommend } from '../lib/stats.ts';
+import { formatPb, formatSets } from '../lib/stats.ts';
 import { Icon } from './Icon.tsx';
 import { Sheet } from './Sheet.tsx';
 
 export function PlanSheet({ onClose }: { onClose: () => void }) {
-  const { entries, exercises, exById, fatigue, pbs, now } = useData();
-  const { openMuscle } = useUi();
-  const rec = recommend(entries, exercises, exById, fatigue, new Date(now));
+  const { entries, pbs, rec } = useData();
+  const { openMuscle, openFootball } = useUi();
 
   return (
     <Sheet title={`${rec.weekday}’s plan`} subtitle={rec.headline} onClose={onClose}>
+      {rec.football && (
+        <div className="md-note">
+          <span className="md-tag">{rec.football.label}</span>
+          <span>{rec.football.note}</span>
+        </div>
+      )}
       <p className="muted">{rec.detail}</p>
 
       {rec.muscles.length > 0 && (
@@ -51,6 +56,8 @@ export function PlanSheet({ onClose }: { onClose: () => void }) {
             })}
           </ul>
         </>
+      ) : rec.football?.label === 'Match day' ? (
+        <button className="btn pitch block" onClick={openFootball}>Log the match</button>
       ) : (
         <p className="muted">Everything you usually train today is still recovering. A rest or mobility day might be the move.</p>
       )}
