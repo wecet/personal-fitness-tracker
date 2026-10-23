@@ -11,6 +11,7 @@ interface ExerciseRow {
   name: string;
   muscle: string;
   secondary: string;
+  metric: string;
   custom: number;
 }
 
@@ -27,6 +28,7 @@ const toExercise = (r: ExerciseRow): Exercise => ({
   name: r.name,
   muscle: r.muscle as Exercise['muscle'],
   secondary: JSON.parse(r.secondary),
+  metric: r.metric as Exercise['metric'],
   custom: r.custom === 1,
 });
 
@@ -61,9 +63,19 @@ export function openDb(path: string) {
     CREATE INDEX IF NOT EXISTS entries_performed_at ON entries(performed_at);
   `);
 
-  const seed = db.prepare('INSERT OR IGNORE INTO exercises (name, muscle, secondary) VALUES (?, ?, ?)');
-  for (const [name, muscle, secondary] of EXERCISE_LIBRARY) {
-    seed.run(name, muscle, JSON.stringify(secondary));
+  const columns = db.prepare('PRAGMA table_info(exercises)').all() as unknown as { name: string }[];
+  if (!columns.some((c) => c.name === 'metric')) {
+    db.exec("ALTER TABLE exercises ADD COLUMN metric TEXT NOT NULL DEFAULT 'weight'");
+  }
+
+  // Library exercises are kept in sync with the code; custom ones are left alone.
+  const seed = db.prepare(`
+    INSERT INTO exercises (name, muscle, secondary, metric) VALUES (?, ?, ?, ?)
+    ON CONFLICT(name) DO UPDATE SET muscle = excluded.muscle, secondary = excluded.secondary, metric = excluded.metric
+    WHERE custom = 0
+  `);
+  for (const [name, muscle, secondary, metric = 'weight'] of EXERCISE_LIBRARY) {
+    seed.run(name, muscle, JSON.stringify(secondary), metric);
   }
 
   const getExercise = db.prepare('SELECT * FROM exercises WHERE id = ?');
@@ -77,14 +89,15 @@ export function openDb(path: string) {
       };
     },
 
-    exerciseExists(id: number) {
-      return getExercise.get(id) !== undefined;
+    getExercise(id: number): Exercise | undefined {
+      const row = getExercise.get(id) as unknown as ExerciseRow | undefined;
+      return row && toExercise(row);
     },
 
     addExercise(input: NewExercise): Exercise {
       const { lastInsertRowid } = db
-        .prepare('INSERT INTO exercises (name, muscle, secondary, custom) VALUES (?, ?, ?, 1)')
-        .run(input.name, input.muscle, JSON.stringify(input.secondary ?? []));
+        .prepare('INSERT INTO exercises (name, muscle, secondary, metric, custom) VALUES (?, ?, ?, ?, 1)')
+        .run(input.name, input.muscle, JSON.stringify(input.secondary ?? []), input.metric ?? 'weight');
       return toExercise(getExercise.get(lastInsertRowid) as unknown as ExerciseRow);
     },
 
