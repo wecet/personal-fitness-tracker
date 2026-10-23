@@ -1,24 +1,27 @@
 import { useRef, useState, type PointerEvent } from 'react';
 import { MUSCLE_BY_ID, type MuscleId } from '../../shared/muscles.ts';
-import type { MuscleFatigue } from '../lib/stats.ts';
 import { BACK, BACK_DETAILS, FRONT, FRONT_DETAILS, HEAD, SILHOUETTE, VIEWBOX } from './bodyPaths.ts';
 import { Icon } from './Icon.tsx';
 
 type Side = 'front' | 'back';
+
+export type OverlayTone = 'fatigue' | 'volume' | 'neglect';
 
 const MIRROR = 'matrix(-1 0 0 1 200 0)';
 const MAX_TILT = 9;
 
 interface FigureProps {
   side: Side;
-  fatigue: Map<MuscleId, MuscleFatigue>;
+  /** 0–1 fill strength per muscle. */
+  overlay: Map<MuscleId, number>;
+  tone: OverlayTone;
   suggested: MuscleId[];
   hover: MuscleId | null;
   onHover: (m: MuscleId | null) => void;
   onSelect: (m: MuscleId) => void;
 }
 
-function Figure({ side, fatigue, suggested, hover, onHover, onSelect }: FigureProps) {
+function Figure({ side, overlay, tone, suggested, hover, onHover, onSelect }: FigureProps) {
   const map = side === 'front' ? FRONT : BACK;
   const details = side === 'front' ? FRONT_DETAILS : BACK_DETAILS;
   const id = (name: string) => `${side}-${name}`;
@@ -59,7 +62,7 @@ function Figure({ side, fatigue, suggested, hover, onHover, onSelect }: FigurePr
       </g>
 
       {(Object.keys(map) as MuscleId[]).map((m) => {
-        const level = fatigue.get(m)?.level ?? 0;
+        const level = overlay.get(m) ?? 0;
         const cls = ['muscle', hover === m && 'is-hover', suggested.includes(m) && 'is-suggested'].filter(Boolean).join(' ');
         return (
           <g
@@ -77,8 +80,8 @@ function Figure({ side, fatigue, suggested, hover, onHover, onSelect }: FigurePr
               <g key={i}>
                 <path d={d} className="muscle-shape" fill={url('muscle')} />
                 <path d={d} className="muscle-shape" fill={url('muscle')} transform={MIRROR} />
-                <path d={d} className="fatigue" style={{ opacity: level * 0.7 }} />
-                <path d={d} className="fatigue" style={{ opacity: level * 0.7 }} transform={MIRROR} />
+                <path d={d} className={`overlay ${tone}`} style={{ opacity: level * 0.7 }} />
+                <path d={d} className={`overlay ${tone}`} style={{ opacity: level * 0.7 }} transform={MIRROR} />
               </g>
             ))}
           </g>
@@ -98,8 +101,9 @@ function Figure({ side, fatigue, suggested, hover, onHover, onSelect }: FigurePr
   );
 }
 
-export function BodyMap({ fatigue, suggested, onSelect }: {
-  fatigue: Map<MuscleId, MuscleFatigue>;
+export function BodyMap({ overlay, tone, suggested, onSelect }: {
+  overlay: Map<MuscleId, number>;
+  tone: OverlayTone;
   suggested: MuscleId[];
   onSelect: (m: MuscleId) => void;
 }) {
@@ -136,7 +140,7 @@ export function BodyMap({ fatigue, suggested, onSelect }: {
   };
 
   const rotateY = (side === 'back' ? 180 : 0) + tilt.y;
-  const figureProps = { fatigue, suggested, hover, onHover: setHover, onSelect: select };
+  const figureProps = { overlay, tone, suggested, hover, onHover: setHover, onSelect: select };
 
   return (
     <div className="bodymap">
