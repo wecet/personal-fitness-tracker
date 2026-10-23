@@ -37,6 +37,18 @@ export interface Entry {
   performedAt: string;
   sets: WorkoutSet[];
   note: string | null;
+  /** The workout session this was logged in, if any. */
+  sessionId?: string | null;
+}
+
+export interface WorkoutSession {
+  id: string;
+  startedAt: string;
+  /** null while the workout is in progress. */
+  endedAt: string | null;
+  /** Session effort 1–10, asked for when finishing. */
+  rpe: number | null;
+  note: string | null;
 }
 
 export type FootballType = 'match' | 'training' | 'futsal' | 'drills';
@@ -58,9 +70,11 @@ export interface Settings {
   id: 'settings';
   matchDays: number[];
   trainingDays: number[];
+  /** Default rest between sets. */
+  restSeconds: number;
 }
 
-export const DEFAULT_SETTINGS: Settings = { id: 'settings', matchDays: [6], trainingDays: [2, 5] };
+export const DEFAULT_SETTINGS: Settings = { id: 'settings', matchDays: [6], trainingDays: [2, 5], restSeconds: 90 };
 
 /**
  * Every user record kind. Records carry a client-generated string id so they
@@ -70,11 +84,12 @@ export interface RecordMap {
   entry: Entry;
   activity: Activity;
   settings: Settings;
+  session: WorkoutSession;
 }
 
 export type RecordKind = keyof RecordMap;
 
-const KINDS: Record<RecordKind, true> = { entry: true, activity: true, settings: true };
+const KINDS: Record<RecordKind, true> = { entry: true, activity: true, settings: true, session: true };
 export const RECORD_KINDS = Object.keys(KINDS) as RecordKind[];
 
 export type Records = { [K in RecordKind]: RecordMap[K][] };
