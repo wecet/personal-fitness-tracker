@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useData, useUi } from '../data.tsx';
 import { beats, bestSet, dateKey, formatPb, formatSet, parseDateKey, type PersonalBest } from '../lib/stats.ts';
 import type { Exercise, ExerciseMetric, WorkoutSet } from '../../shared/types.ts';
+import { useSession } from '../session.tsx';
 import { Icon } from './Icon.tsx';
 
 interface SetDraft {
@@ -48,7 +49,8 @@ const COLUMNS: Record<ExerciseMetric, [string, string, string]> = {
 };
 
 export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; pb?: PersonalBest; onSaved: () => void }) {
-  const { entries, addEntry } = useData();
+  const { entries, addEntry, activeSession } = useData();
+  const { startRest } = useSession();
   const { notify } = useUi();
   const { metric } = exercise;
   const last = entries.findLast((e) => e.exerciseId === exercise.id);
@@ -58,6 +60,7 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
   const [sets, setSets] = useState<SetDraft[]>(() => (last ? last.sets.map((s) => toDraft(s, metric)) : [blank()]));
   const [stopwatch, setStopwatch] = useState<{ index: number; startedAt: number } | null>(null);
   const [, tick] = useState(0);
+  const [done, setDone] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!stopwatch) return;
@@ -72,6 +75,17 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
 
   const update = (i: number, patch: Partial<SetDraft>) => setSets((s) => s.map((d, j) => (j === i ? { ...d, ...patch } : d)));
   const elapsed = (startedAt: number) => Math.max(1, Math.round((Date.now() - startedAt) / 1000));
+
+  /** During a workout, ticking a set off starts the rest timer. */
+  function toggleDone(i: number) {
+    const next = new Set(done);
+    if (next.has(i)) next.delete(i);
+    else {
+      next.add(i);
+      startRest();
+    }
+    setDone(next);
+  }
 
   function toggleStopwatch(i: number) {
     if (stopwatch?.index === i) {
@@ -93,6 +107,7 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
 
   return (
     <form className="logger" onSubmit={submit}>
+      {activeSession && <p className="muted small logger-hint">Tap a set number when it’s done to start your rest.</p>}
       <div className="logger-sets">
         <div className="set-row set-head">
           <span>Set</span>
@@ -105,7 +120,14 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
           const running = stopwatch?.index === i;
           return (
             <div className="set-row" key={i}>
-              <span className="set-index">{i + 1}</span>
+              {activeSession ? (
+                <button type="button" className={`set-index set-done ${done.has(i) ? 'done' : ''}`} aria-pressed={done.has(i)}
+                  aria-label={`Set ${i + 1} done`} onClick={() => toggleDone(i)}>
+                  {done.has(i) ? '✓' : i + 1}
+                </button>
+              ) : (
+                <span className="set-index">{i + 1}</span>
+              )}
               {metric === 'time' ? (
                 <input aria-label={`Set ${i + 1} time`} inputMode="numeric" placeholder="0:30" readOnly={running}
                   className={running ? 'running' : ''}
@@ -124,7 +146,7 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
               <input aria-label={`Set ${i + 1} weight`} inputMode="decimal" placeholder={metric === 'weight' ? '0' : 'BW'}
                 value={s.weight} onChange={(e) => update(i, { weight: e.target.value })} />
               <button type="button" className="icon-btn small" aria-label={`Remove set ${i + 1}`} disabled={sets.length === 1}
-                onClick={() => setSets((all) => all.filter((_, j) => j !== i))}>
+                onClick={() => { setSets((all) => all.filter((_, j) => j !== i)); setDone(new Set()); }}>
                 <Icon name="close" size={16} />
               </button>
             </div>
