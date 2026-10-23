@@ -5,6 +5,9 @@ import { Icon } from './components/Icon.tsx';
 import { FootballSheet } from './components/FootballSheet.tsx';
 import { MuscleSheet } from './components/MuscleSheet.tsx';
 import { PlanSheet } from './components/PlanSheet.tsx';
+import { SessionBar } from './components/SessionBar.tsx';
+import { SummarySheet } from './components/SummarySheet.tsx';
+import { SessionProvider } from './session.tsx';
 import { DataProvider, UiCtx, type SheetState } from './data.tsx';
 import { dateKey } from './lib/stats.ts';
 import { store, type SyncStatus } from './lib/store.ts';
@@ -84,6 +87,7 @@ export function App() {
         setSheet({ type: 'muscle', muscle, exerciseId }),
       openPlan: () => setSheet({ type: 'plan' }),
       openFootball: () => setSheet({ type: 'football' }),
+      openSummary: (sessionId: string) => setSheet({ type: 'summary', sessionId }),
       notify: (message: string, tone: Toast['tone'] = 'default') => setToast({ id: Date.now(), message, tone }),
     }),
     [],
@@ -107,7 +111,7 @@ export function App() {
       </header>
       <Drawer open={drawerOpen} route={route} onClose={closeDrawer} />
 
-      <main>
+      <main className={state?.records.session.some((s) => !s.endedAt) ? 'with-session' : ''}>
         {!state ? (
           status === 'syncing' ? (
             <div className="page empty"><div className="spinner" /></div>
@@ -119,6 +123,7 @@ export function App() {
           )
         ) : (
           <DataProvider state={state}>
+            <SessionProvider>
             {route === 'body' && <BodyPage />}
             {route === 'tracker' && <TrackerPage />}
             {route === 'records' && <RecordsPage />}
@@ -128,6 +133,9 @@ export function App() {
             )}
             {sheet?.type === 'plan' && <PlanSheet onClose={closeSheet} />}
             {sheet?.type === 'football' && <FootballSheet onClose={closeSheet} />}
+            {sheet?.type === 'summary' && <SummarySheet sessionId={sheet.sessionId} onClose={closeSheet} />}
+            <SessionBar />
+            </SessionProvider>
           </DataProvider>
         )}
       </main>
