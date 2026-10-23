@@ -1,0 +1,43 @@
+import { useData } from '../data.tsx';
+import { WEEKDAYS } from '../lib/stats.ts';
+import type { Settings } from '../../shared/types.ts';
+
+const MON_FIRST = [1, 2, 3, 4, 5, 6, 0];
+
+function DayPicker({ label, hint, value, onChange }: {
+  label: string;
+  hint: string;
+  value: number[];
+  onChange: (days: number[]) => void;
+}) {
+  const toggle = (d: number) => onChange(value.includes(d) ? value.filter((x) => x !== d) : [...value, d]);
+  return (
+    <div className="field">
+      <span className="field-head"><span>{label}</span></span>
+      <div className="day-picker" role="group" aria-label={label}>
+        {MON_FIRST.map((d) => (
+          <button key={d} type="button" aria-pressed={value.includes(d)} className={value.includes(d) ? 'active' : ''} onClick={() => toggle(d)}>
+            {WEEKDAYS[d].slice(0, 3)}
+          </button>
+        ))}
+      </div>
+      <p className="muted small">{hint}</p>
+    </div>
+  );
+}
+
+export function SettingsPage() {
+  const { settings, put } = useData();
+  const update = (patch: Partial<Settings>) => put('settings', { ...settings, ...patch });
+
+  return (
+    <div className="page">
+      <section className="card">
+        <h3>Football schedule</h3>
+        <p className="muted small">Ember plans your gym days around these — no heavy legs the day before or after a match, or on training days.</p>
+        <DayPicker label="Match days" hint="Usually one day a week." value={settings.matchDays} onChange={(matchDays) => update({ matchDays })} />
+        <DayPicker label="Training days" hint="Include days you only sometimes train." value={settings.trainingDays} onChange={(trainingDays) => update({ trainingDays })} />
+      </section>
+    </div>
+  );
+}

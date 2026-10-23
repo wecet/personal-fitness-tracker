@@ -2,12 +2,13 @@ import { useEffect } from 'react';
 import { Brand } from './Brand.tsx';
 import { Icon, type IconName } from './Icon.tsx';
 
-export type Route = 'body' | 'tracker' | 'records';
+export type Route = 'body' | 'tracker' | 'records' | 'settings';
 
 export const ROUTES: { id: Route; label: string; icon: IconName }[] = [
   { id: 'body', label: 'Body Map', icon: 'body' },
   { id: 'tracker', label: 'Tracker', icon: 'calendar' },
   { id: 'records', label: 'Personal Bests', icon: 'trophy' },
+  { id: 'settings', label: 'Settings', icon: 'settings' },
 ];
 
 export function Drawer({ open, route, onClose }: { open: boolean; route: Route; onClose: () => void }) {
