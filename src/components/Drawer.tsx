@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Brand } from './Brand.tsx';
 import { Icon, type IconName } from './Icon.tsx';
 
 export type Route = 'body' | 'tracker' | 'records';
@@ -22,7 +23,7 @@ export function Drawer({ open, route, onClose }: { open: boolean; route: Route; 
       <div className={`drawer-backdrop ${open ? 'open' : ''}`} onClick={onClose} />
       <nav className={`drawer ${open ? 'open' : ''}`} aria-hidden={!open} inert={!open}>
         <div className="drawer-head">
-          <span className="brand">Rep<span>Map</span></span>
+          <Brand />
           <button className="icon-btn" onClick={onClose} aria-label="Close menu"><Icon name="close" /></button>
         </div>
         <ul>
