@@ -135,6 +135,27 @@ export function muscleFatigue(entries: Entry[], exById: Map<number, Exercise>, n
   return out;
 }
 
+/** Sets per muscle in the last 7 days; secondary muscles count half. */
+export function weeklySets(entries: Entry[], exById: Map<number, Exercise>, now: number): Map<MuscleId, number> {
+  const out = new Map<MuscleId, number>();
+  const add = (m: MuscleId, n: number) => out.set(m, (out.get(m) ?? 0) + n);
+  for (const e of entries) {
+    const ex = exById.get(e.exerciseId);
+    const age = now - Date.parse(e.performedAt);
+    if (!ex || age < 0 || age > 7 * DAY) continue;
+    add(ex.muscle, e.sets.length);
+    for (const m of ex.secondary) add(m, e.sets.length * SECONDARY_INTENSITY);
+  }
+  return out;
+}
+
+/** Whole days since each muscle last got direct (primary) gym work; missing = never. */
+export function daysSinceTrained(entries: Entry[], exById: Map<number, Exercise>, now: number): Map<MuscleId, number> {
+  const out = new Map<MuscleId, number>();
+  for (const [m, at] of lastTrained(entries, exById)) out.set(m, Math.floor((now - at) / DAY));
+  return out;
+}
+
 export const isRecovered = (f: MuscleFatigue | undefined) => !f || (f.hoursLeft === 0 && f.level < 0.3);
 
 export function recoveryLabel(f: MuscleFatigue | undefined): string {
