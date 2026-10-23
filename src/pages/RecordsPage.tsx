@@ -31,7 +31,7 @@ export function RecordsPage() {
                   <button onClick={() => openMuscle(ex.muscle, ex.id)}>
                     <span>{ex.name}</span>
                     <span className="muted small">{new Date(pb.performedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                    <span className="pb-badge">{formatPb(pb)}</span>
+                    <span className="pb-badge">{formatPb(pb, ex.metric)}</span>
                   </button>
                 </li>
               );
