@@ -18,6 +18,7 @@ import { BodyPage } from './pages/BodyPage.tsx';
 import { BodyweightPage } from './pages/BodyweightPage.tsx';
 import { LoadPage } from './pages/LoadPage.tsx';
 import { RecordsPage } from './pages/RecordsPage.tsx';
+import { ReviewPage } from './pages/ReviewPage.tsx';
 import { RoutinesPage } from './pages/RoutinesPage.tsx';
 import { SettingsPage } from './pages/SettingsPage.tsx';
 import { TrackerPage } from './pages/TrackerPage.tsx';
@@ -139,6 +140,7 @@ export function App() {
             {route === 'load' && <LoadPage />}
             {route === 'records' && <RecordsPage />}
             {route === 'bodyweight' && <BodyweightPage />}
+            {route === 'review' && <ReviewPage />}
             {route === 'settings' && <SettingsPage />}
             {sheet?.type === 'muscle' && (
               <MuscleSheet key={`${sheet.muscle}-${sheet.exerciseId}`} muscle={sheet.muscle} exerciseId={sheet.exerciseId} onClose={closeSheet} />
