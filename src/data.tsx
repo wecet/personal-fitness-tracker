@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api } from './api.ts';
 import { beats, bestSet, muscleFatigue, personalBests, recommend, type MuscleFatigue, type PersonalBest, type Recommendation } from './lib/stats.ts';
+import { dailyLoad, workload, type DayLoad, type Workload } from './lib/load.ts';
 import { newId, store } from './lib/store.ts';
 import type { MuscleId } from '../shared/muscles.ts';
 import { DEFAULT_SETTINGS, type Activity, type AppState, type Entry, type Exercise, type NewExercise, type RecordKind, type RecordMap, type Records, type Settings, type WorkoutSession } from '../shared/types.ts';
@@ -19,6 +20,10 @@ interface AppData {
   activeSession: WorkoutSession | null;
   settings: Settings;
   rec: Recommendation;
+  /** Training load per local day. */
+  daily: Map<string, DayLoad>;
+  firstDay: string | null;
+  load: Workload;
   exById: Map<number, Exercise>;
   pbs: Map<number, PersonalBest>;
   prEntryIds: Set<string>;
@@ -71,6 +76,9 @@ export function DataProvider({ state, children }: { state: AppState; children: R
     () => muscleFatigue(entries, exById, now, activities, records.soreness),
     [entries, exById, now, activities, records.soreness],
   );
+  const daily = useMemo(() => dailyLoad(entries, activities, sessions), [entries, activities, sessions]);
+  const firstDay = useMemo(() => [...daily.keys()].sort()[0] ?? null, [daily]);
+  const load = useMemo(() => workload(daily, new Date(now), firstDay), [daily, now, firstDay]);
   const rec = useMemo(
     () => recommend({ entries, activities, exercises, exById, fatigue, settings, now: new Date(now) }),
     [entries, activities, exercises, exById, fatigue, settings, now],
@@ -102,8 +110,8 @@ export function DataProvider({ state, children }: { state: AppState; children: R
   }, []);
 
   const value = useMemo(
-    () => ({ exercises, records, entries, activities, sessions, activeSession, settings, rec, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise }),
-    [exercises, records, entries, activities, sessions, activeSession, settings, rec, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise],
+    () => ({ exercises, records, entries, activities, sessions, activeSession, settings, rec, daily, firstDay, load, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise }),
+    [exercises, records, entries, activities, sessions, activeSession, settings, rec, daily, firstDay, load, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
