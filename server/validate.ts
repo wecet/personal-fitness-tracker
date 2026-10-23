@@ -88,6 +88,16 @@ export function makeValidators(getExercise: (id: number) => Exercise | undefined
         note: note(r.note),
       };
     },
+    soreness(raw) {
+      const r = object(raw);
+      const muscles: Record<string, 1 | 2> = {};
+      for (const [m, level] of Object.entries(object(r.muscles))) {
+        if (!isMuscleId(m)) fail('Unknown muscle');
+        if (level !== 1 && level !== 2) fail('Soreness level must be 1 or 2');
+        muscles[m] = level as 1 | 2;
+      }
+      return { id: recordId(r.id), recordedAt: isoDate(r.recordedAt, 'recordedAt'), muscles };
+    },
     activity(raw) {
       const r = object(raw);
       return {

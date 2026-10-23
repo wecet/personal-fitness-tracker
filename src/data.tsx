@@ -67,7 +67,10 @@ export function DataProvider({ state, children }: { state: AppState; children: R
   const settings = useMemo(() => ({ ...DEFAULT_SETTINGS, ...records.settings[0] }), [records.settings]);
   const sessions = useMemo(() => [...records.session].sort((a, b) => a.startedAt.localeCompare(b.startedAt)), [records.session]);
   const activeSession = sessions.findLast((s) => !s.endedAt) ?? null;
-  const fatigue = useMemo(() => muscleFatigue(entries, exById, now, activities), [entries, exById, now, activities]);
+  const fatigue = useMemo(
+    () => muscleFatigue(entries, exById, now, activities, records.soreness),
+    [entries, exById, now, activities, records.soreness],
+  );
   const rec = useMemo(
     () => recommend({ entries, activities, exercises, exById, fatigue, settings, now: new Date(now) }),
     [entries, activities, exercises, exById, fatigue, settings, now],
@@ -112,6 +115,7 @@ export type SheetState =
   | { type: 'plan' }
   | { type: 'football' }
   | { type: 'summary'; sessionId: string }
+  | { type: 'soreness' }
   | null;
 
 interface UiActions {
@@ -119,6 +123,7 @@ interface UiActions {
   openPlan(): void;
   openFootball(): void;
   openSummary(sessionId: string): void;
+  openSoreness(): void;
   notify(message: string, tone?: 'default' | 'pb' | 'error'): void;
 }
 
