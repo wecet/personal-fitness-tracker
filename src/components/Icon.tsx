@@ -11,6 +11,8 @@ const PATHS = {
   sparkle: 'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z',
   flip: 'M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4',
   download: 'M12 4v11m0 0l-4-4m4 4l4-4M5 20h14',
+  timer: 'M12 9v4l2.5 2M9.5 2.5h5M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16z',
+  stop: 'M8 8h8v8H8z',
 } as const;
 
 export type IconName = keyof typeof PATHS;

@@ -1,5 +1,5 @@
 import { MUSCLES, MUSCLE_BY_ID, type MuscleCategory, type MuscleId } from '../../shared/muscles.ts';
-import type { Entry, Exercise, WorkoutSet } from '../../shared/types.ts';
+import type { Entry, Exercise, ExerciseMetric, WorkoutSet } from '../../shared/types.ts';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -28,42 +28,63 @@ function range(values: number[], fmt: (n: number) => string = String) {
   return lo === hi ? fmt(lo) : `${fmt(lo)}–${fmt(hi)}`;
 }
 
-/** e.g. "3 × 8–10 @ 25 kg" */
-export function formatSets(sets: WorkoutSet[]): string {
-  const reps = range(sets.map((s) => s.reps));
-  const weights = sets.map((s) => s.weight);
-  if (weights.every((w) => w === 0)) return `${sets.length} × ${reps} reps`;
-  const weight = range(weights, (n) => String(Number.isInteger(n) ? n : Number(n.toFixed(2))));
-  return `${sets.length} × ${reps} @ ${weight} kg`;
+/** 45 → "45s", 90 → "1:30" */
+export function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-export function formatPb(pb: PersonalBest): string {
-  return pb.weight > 0 ? `${formatKg(pb.weight)} × ${pb.reps}` : `${pb.reps} reps`;
+const trimKg = (n: number) => String(Number.isInteger(n) ? n : Number(n.toFixed(2)));
+
+/** One set, e.g. "10 × 25 kg", "12 reps", "8 × +10 kg", "1:30". */
+export function formatSet(s: WorkoutSet, metric: ExerciseMetric): string {
+  if (metric === 'time') return s.weight > 0 ? `${formatDuration(s.seconds ?? 0)} @ ${formatKg(s.weight)}` : formatDuration(s.seconds ?? 0);
+  if (metric === 'bodyweight') return s.weight > 0 ? `${s.reps} × +${formatKg(s.weight)}` : `${s.reps} reps`;
+  return s.weight > 0 ? `${s.reps} × ${formatKg(s.weight)}` : `${s.reps} reps`;
 }
+
+/** A whole entry, e.g. "3 × 8–10 @ 25 kg", "3 × 12 reps", "3 × 0:45–1:00". */
+export function formatSets(sets: WorkoutSet[], metric: ExerciseMetric): string {
+  const weights = sets.map((s) => s.weight);
+  const loaded = weights.some((w) => w > 0);
+  const weight = range(weights, trimKg);
+  if (metric === 'time') {
+    const time = range(sets.map((s) => s.seconds ?? 0), formatDuration);
+    return `${sets.length} × ${time}${loaded ? ` @ ${weight} kg` : ''}`;
+  }
+  const reps = range(sets.map((s) => s.reps));
+  if (!loaded) return `${sets.length} × ${reps} reps`;
+  return `${sets.length} × ${reps} @ ${metric === 'bodyweight' ? '+' : ''}${weight} kg`;
+}
+
+export const formatPb = (pb: PersonalBest, metric: ExerciseMetric) => formatSet(pb, metric);
 
 // ---------- personal bests ----------
 
-export interface PersonalBest {
-  weight: number;
-  reps: number;
+export interface PersonalBest extends WorkoutSet {
   performedAt: string;
   entryId: number;
 }
 
-const beats = (a: WorkoutSet, b: WorkoutSet) => a.weight > b.weight || (a.weight === b.weight && a.reps > b.reps);
+/** Heavier wins; at equal weight, more reps (or a longer hold for timed exercises). */
+export function beats(a: WorkoutSet, b: WorkoutSet, metric: ExerciseMetric): boolean {
+  if (a.weight !== b.weight) return a.weight > b.weight;
+  return metric === 'time' ? (a.seconds ?? 0) > (b.seconds ?? 0) : a.reps > b.reps;
+}
 
-export function bestSet(sets: WorkoutSet[]): WorkoutSet {
-  return sets.reduce((best, s) => (beats(s, best) ? s : best));
+export function bestSet(sets: WorkoutSet[], metric: ExerciseMetric): WorkoutSet {
+  return sets.reduce((best, s) => (beats(s, best, metric) ? s : best));
 }
 
 /** Current PB per exercise, plus the ids of every entry that set a new PB when it was logged. */
-export function personalBests(entries: Entry[]) {
+export function personalBests(entries: Entry[], exById: Map<number, Exercise>) {
   const best = new Map<number, PersonalBest>();
   const prEntryIds = new Set<number>();
   for (const e of [...entries].sort((a, b) => a.performedAt.localeCompare(b.performedAt))) {
-    const top = bestSet(e.sets);
+    const metric = exById.get(e.exerciseId)?.metric ?? 'weight';
+    const top = bestSet(e.sets, metric);
     const current = best.get(e.exerciseId);
-    if (!current || beats(top, current)) {
+    if (!current || beats(top, current, metric)) {
       best.set(e.exerciseId, { ...top, performedAt: e.performedAt, entryId: e.id });
       prEntryIds.add(e.id);
     }

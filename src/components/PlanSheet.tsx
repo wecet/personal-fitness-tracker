@@ -40,10 +40,10 @@ export function PlanSheet({ onClose }: { onClose: () => void }) {
                       <strong>{ex.name}</strong>
                       <span className="muted small">
                         {MUSCLE_BY_ID[ex.muscle].name}
-                        {last && ` · last ${formatSets(last.sets)}`}
+                        {last && ` · last ${formatSets(last.sets, ex.metric)}`}
                       </span>
                     </span>
-                    {pb && <span className="pb-badge">PB {formatPb(pb)}</span>}
+                    {pb && <span className="pb-badge">PB {formatPb(pb, ex.metric)}</span>}
                     <Icon name="chevron" size={18} />
                   </button>
                 </li>
