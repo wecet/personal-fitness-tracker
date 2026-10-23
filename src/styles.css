@@ -10,9 +10,9 @@
   --coral-ink: #2a1210;
   --fatigue: #ff2a2a;
   --success: #6fcf97;
-  --pitch: #5cc98a;
+  --football: #5bb4d6;
   --amber: #f5b14c;
-  --pitch-ink: #0e2a1a;
+  --football-ink: #0b2230;
 
   --skin-edge: #232528;
   --skin-core: #3b3e44;
@@ -120,7 +120,7 @@ main { max-width: 980px; margin: 0 auto; padding: 0 var(--gutter) calc(var(--saf
 }
 .btn.primary { background: var(--coral); color: var(--coral-ink); }
 .btn.primary:hover:not(:disabled) { background: var(--coral-strong); }
-.btn.pitch { background: var(--pitch); color: var(--pitch-ink); }
+.btn.pitch { background: var(--football); color: var(--football-ink); }
 .btn.ghost { border: 1px dashed var(--border); color: var(--muted); }
 .btn.ghost:hover { color: var(--text); border-color: var(--muted); }
 .btn.block { width: 100%; }
@@ -308,15 +308,15 @@ input:focus { outline: none; border-color: var(--coral); }
   height: 42px; border-radius: 12px; font-weight: 600; font-size: 14px;
   background: var(--surface); border: 1px solid var(--border);
 }
-.quick.pitch { color: var(--pitch); border-color: color-mix(in srgb, var(--pitch) 35%, var(--border)); }
+.quick.pitch { color: var(--football); border-color: color-mix(in srgb, var(--football) 35%, var(--border)); }
 .quick svg { flex-shrink: 0; }
 .quick.coral { color: var(--coral); border-color: color-mix(in srgb, var(--coral) 35%, var(--border)); }
 
 .md-tag {
   display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 6px; vertical-align: 1px;
-  font-size: 10.5px; letter-spacing: 0.04em; background: color-mix(in srgb, var(--pitch) 20%, transparent); color: var(--pitch);
+  font-size: 10.5px; letter-spacing: 0.04em; background: color-mix(in srgb, var(--football) 20%, transparent); color: var(--football);
 }
-.md-note { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 10px; font-size: 14px; background: color-mix(in srgb, var(--pitch) 10%, transparent); }
+.md-note { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 10px; font-size: 14px; background: color-mix(in srgb, var(--football) 10%, transparent); }
 .md-note .md-tag { margin: 1px 0 0; flex-shrink: 0; }
 
 /* ---------- forms ---------- */
@@ -325,17 +325,17 @@ input:focus { outline: none; border-color: var(--coral); }
 .field-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; color: var(--muted); }
 .field-head strong { color: var(--text); }
 .field p { margin: 0; }
-input[type='range'] { width: 100%; accent-color: var(--pitch); height: 28px; }
+input[type='range'] { width: 100%; accent-color: var(--football); height: 28px; }
 .segmented.wide { display: flex; }
 .segmented.wide button { flex: 1; padding: 8px 4px; font-size: 13.5px; }
 .football-form { display: flex; flex-direction: column; gap: 6px; }
-.football-form .segmented button.active { background: var(--pitch); color: var(--pitch-ink); }
+.football-form .segmented button.active { background: var(--football); color: var(--football-ink); }
 .effort { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
 .effort button {
   height: 40px; border-radius: 9px; font-weight: 700; font-size: 14px; background: var(--surface-2);
   color: var(--muted); transition: background 0.15s, color 0.15s;
 }
-.effort button.active { color: var(--coral-ink); background: color-mix(in srgb, var(--coral) calc(40% + var(--n, 0) * 6%), var(--pitch)); }
+.effort button.active { color: var(--coral-ink); background: color-mix(in srgb, var(--coral) calc(40% + var(--n, 0) * 6%), var(--football)); }
 .effort-1 { --n: 1; }
 .effort-2 { --n: 2; }
 .effort-3 { --n: 3; }
@@ -405,7 +405,7 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .l3 { background: color-mix(in srgb, var(--coral) 80%, var(--surface-2)); }
 .l4 { background: var(--coral); }
 .cell.selected { outline: 2px solid var(--text); outline-offset: 1px; }
-.cell.fb { box-shadow: inset 0 0 0 2px var(--pitch); }
+.cell.fb { box-shadow: inset 0 0 0 2px var(--football); }
 
 .graph-scroll { overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
 .graph { display: flex; gap: 3px; width: max-content; }
@@ -427,7 +427,7 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .day.l0 { background: transparent; }
 .day.l3, .day.l4 { color: var(--coral-ink); font-weight: 700; }
 .day.outside { opacity: 0.35; }
-.day.fb { box-shadow: inset 0 0 0 2px var(--pitch); }
+.day.fb { box-shadow: inset 0 0 0 2px var(--football); }
 .day.today { box-shadow: inset 0 0 0 1.5px var(--coral); }
 .day.selected { box-shadow: inset 0 0 0 2px var(--text); }
 .day:hover:not(:disabled) { filter: brightness(1.2); }
@@ -443,7 +443,7 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .habit-day { font-weight: 600; }
 .habit-bar { height: 10px; border-radius: 4px; background: var(--surface-2); overflow: hidden; display: flex; flex-direction: column; gap: 2px; }
 .habit-bar span { display: block; flex: 1; border-radius: 4px; background: var(--coral); }
-.habit-bar span.fb { background: var(--pitch); }
+.habit-bar span.fb { background: var(--football); }
 .habit-focus { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .habits .small { text-align: right; }
 
@@ -465,7 +465,7 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 
 /* ---------- charts ---------- */
 
-:root { --chart-1: #e5675b; --chart-2: #3f9fc0; --chart-grid: #33363b; }
+:root { --chart-1: #e5675b; --chart-2: #3f9fc0; /* football; validated against --chart-1 for CVD on the dark surface */ --chart-grid: #33363b; }
 .chart { position: relative; }
 .chart svg { display: block; overflow: visible; outline: none; touch-action: pan-y; }
 .chart-grid { stroke: var(--chart-grid); stroke-width: 1; }
@@ -473,7 +473,8 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .chart-value { fill: var(--text); font-size: 12px; font-weight: 700; }
 .chart-dot { stroke: var(--surface); stroke-width: 2; }
 .chart-crosshair { stroke: var(--muted); stroke-width: 1; }
-.chart-band { fill: var(--text); opacity: 0.05; }
+.chart-band { fill: var(--text); opacity: 0.06; }
+.chart-legend i.band-swatch { background: var(--text); opacity: 0.2; }
 .chart-bar.active path { filter: brightness(1.2); }
 .chart-legend { display: flex; gap: 14px; font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
 .chart-legend i, .tooltip-row i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
@@ -492,3 +493,22 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 
 .history.full { border-top: 0; padding-top: 0; }
 .history.full li { padding: 6px 0; border-bottom: 1px solid var(--border); }
+
+/* ---------- training load ---------- */
+
+:root { --warning: #f5b14c; --critical: #ff5a5a; }
+.hero-figure { font-size: 52px; line-height: 1; font-weight: 800; letter-spacing: -0.03em; }
+.load-hero { display: flex; flex-direction: column; gap: 8px; }
+.load-hero p { margin: 0; }
+.load-hero-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.zone-badge { padding: 5px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; background: var(--surface-2); }
+.zone-sweet .zone-badge { color: var(--success); background: color-mix(in srgb, var(--success) 14%, transparent); }
+.zone-caution .zone-badge, .zone-low .zone-badge { color: var(--warning); background: color-mix(in srgb, var(--warning) 14%, transparent); }
+.zone-spike .zone-badge { color: var(--critical); background: color-mix(in srgb, var(--critical) 14%, transparent); }
+.load-split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+.load-split div { display: flex; flex-direction: column; padding: 10px; border-radius: 10px; background: var(--surface-2); }
+.load-split span { font-size: 12px; color: var(--muted); }
+.explainer { margin: 0 4px; }
+.load-warning { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; font-size: 14px; }
+.load-warning.spike { background: color-mix(in srgb, var(--critical) 14%, transparent); border: 1px solid color-mix(in srgb, var(--critical) 40%, transparent); }
+.load-warning.caution { background: color-mix(in srgb, var(--warning) 12%, transparent); border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent); }
