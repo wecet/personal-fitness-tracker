@@ -50,6 +50,17 @@ export function formatSets(sets: WorkoutSet[], metric: ExerciseMetric): string {
 
 export const formatPb = (pb: PersonalBest, metric: ExerciseMetric) => formatSet(pb, metric);
 
+/** Kilograms moved (reps × weight). Timed holds don't count. */
+export function entryVolume(sets: WorkoutSet[], metric: ExerciseMetric): number {
+  return metric === 'time' ? 0 : sets.reduce((sum, s) => sum + s.reps * s.weight, 0);
+}
+
+/** "52 min", "1 h 05" */
+export function formatMinutes(minutes: number): string {
+  const m = Math.round(minutes);
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`;
+}
+
 // ---------- personal bests ----------
 
 export interface PersonalBest extends WorkoutSet {

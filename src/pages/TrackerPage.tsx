@@ -5,7 +5,7 @@ import { Icon } from '../components/Icon.tsx';
 import { useData, useUi } from '../data.tsx';
 import { groupByDay, level, type DayLog } from '../lib/days.ts';
 import { EFFORT_LABEL, FOOTBALL_LABEL } from '../lib/football.ts';
-import { dateKey, formatSet, formatSets, parseDateKey, weekdayHabits, WEEKDAYS } from '../lib/stats.ts';
+import { dateKey, formatMinutes, formatSet, formatSets, parseDateKey, weekdayHabits, WEEKDAYS } from '../lib/stats.ts';
 
 const DAY = 86_400_000;
 const WEEKS_SHOWN = 53;
@@ -121,8 +121,9 @@ function MonthCalendar({ byDay, selected, onSelect }: {
 function DayDetail({ dayKey, log }: { dayKey: string; log: DayLog | undefined }) {
   const entries = log?.entries ?? [];
   const activities = log?.activities ?? [];
-  const { exById, prEntryIds, remove } = useData();
-  const { openMuscle } = useUi();
+  const { exById, prEntryIds, remove, sessions } = useData();
+  const { openMuscle, openSummary } = useUi();
+  const daySessions = sessions.filter((s) => s.endedAt && dateKey(s.startedAt) === dayKey);
   const date = parseDateKey(dayKey);
   const title = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
   const muscles = [...new Set(entries.map((e) => exById.get(e.exerciseId)?.muscle).filter((m) => m !== undefined))];
@@ -140,6 +141,16 @@ function DayDetail({ dayKey, log }: { dayKey: string; log: DayLog | undefined })
     <section className="card day-detail">
       <h3>{title}</h3>
       {entries.length === 0 && activities.length === 0 && <p className="muted">No workout logged.</p>}
+      {daySessions.map((s) => (
+        <button key={s.id} className="session-row" onClick={() => openSummary(s.id)}>
+          <span>🏋️ Workout</span>
+          <span className="muted small">
+            {formatMinutes((Date.parse(s.endedAt!) - Date.parse(s.startedAt)) / 60_000)}
+            {s.rpe && ` · effort ${s.rpe}`}
+          </span>
+          <Icon name="chevron" size={16} />
+        </button>
+      ))}
       {activities.length > 0 && (
         <ul className="day-entries football">
           {activities.map((a) => (
