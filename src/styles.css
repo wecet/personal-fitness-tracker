@@ -560,3 +560,16 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .bw-form { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; }
 .bw-form .date-input { height: 44px; }
 .day-entries li > span:first-child { flex: 1; }
+
+/* ---------- year in review ---------- */
+
+.review-hero { display: flex; flex-direction: column; gap: 6px; background: linear-gradient(140deg, color-mix(in srgb, var(--coral) 22%, var(--surface)), var(--surface) 65%); }
+.review-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.highlights { display: flex; flex-direction: column; gap: 14px; }
+.highlights div { display: flex; flex-direction: column; gap: 2px; }
+.highlights strong { font-size: 17px; }
+.muscle-bars { display: flex; flex-direction: column; gap: 8px; }
+.muscle-bars li { display: grid; grid-template-columns: 90px 1fr 64px; gap: 10px; align-items: center; font-size: 14px; }
+.muscle-bars .small { text-align: right; }
+.muscle-bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.muscle-bar span { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--chart-1); }
