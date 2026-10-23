@@ -1,5 +1,5 @@
 import { MUSCLES, MUSCLE_BY_ID, type MuscleCategory, type MuscleId } from '../../shared/muscles.ts';
-import type { Activity, Entry, Exercise, ExerciseMetric, Settings, WorkoutSet } from '../../shared/types.ts';
+import type { Activity, Entry, Exercise, ExerciseMetric, Settings, Soreness, SorenessLevel, WorkoutSet } from '../../shared/types.ts';
 import { dateKey } from './dates.ts';
 import { activityIntensity, FOOTBALL_MUSCLES, footballContext } from './football.ts';
 
@@ -101,11 +101,25 @@ export interface MuscleFatigue {
   level: number;
   /** Hours until the recommended rest period is over (primary work only). */
   hoursLeft: number;
+  /** Set when a soreness check-in is what keeps this muscle recovering. */
+  sore?: SorenessLevel;
 }
+
+/** How long reported soreness keeps a muscle out of heavy work, and how strongly it shows. */
+const SORENESS_EFFECT: Record<SorenessLevel, { hours: number; intensity: number }> = {
+  1: { hours: 24, intensity: 0.5 },
+  2: { hours: 48, intensity: 0.85 },
+};
 
 const SECONDARY_INTENSITY = 0.5;
 
-export function muscleFatigue(entries: Entry[], exById: Map<number, Exercise>, now: number, activities: Activity[] = []) {
+export function muscleFatigue(
+  entries: Entry[],
+  exById: Map<number, Exercise>,
+  now: number,
+  activities: Activity[] = [],
+  soreness: Soreness[] = [],
+) {
   const out = new Map<MuscleId, MuscleFatigue>();
   /** `scale` shortens the rest period for lighter work; `needsRest` marks work that should block heavy training. */
   const hit = (muscle: MuscleId, at: number, intensity: number, needsRest: boolean, scale = 1) => {
@@ -131,6 +145,18 @@ export function muscleFatigue(entries: Entry[], exById: Map<number, Exercise>, n
     if (now - at > 4 * DAY) continue;
     const intensity = activityIntensity(a);
     for (const [m, share] of FOOTBALL_MUSCLES) hit(m, at, intensity * share, intensity * share >= 0.6, intensity);
+  }
+  // Only the most recent check-in counts: reporting a muscle as fine again clears it.
+  const latest = soreness.reduce<Soreness | null>((a, b) => (!a || b.recordedAt > a.recordedAt ? b : a), null);
+  if (latest) {
+    const at = Date.parse(latest.recordedAt);
+    for (const [m, level] of Object.entries(latest.muscles) as [MuscleId, SorenessLevel][]) {
+      const { hours, intensity } = SORENESS_EFFECT[level];
+      const before = out.get(m)?.hoursLeft ?? 0;
+      hit(m, at, intensity, true, hours / MUSCLE_BY_ID[m].recoveryHours);
+      const after = out.get(m);
+      if (after && after.hoursLeft > before) after.sore = level;
+    }
   }
   return out;
 }
@@ -160,6 +186,7 @@ export const isRecovered = (f: MuscleFatigue | undefined) => !f || (f.hoursLeft 
 
 export function recoveryLabel(f: MuscleFatigue | undefined): string {
   if (!f || f.level === 0) return 'Ready to train';
+  if (f.sore) return `${f.sore === 2 ? 'Very sore' : 'A bit sore'} · rest ~${Math.ceil(f.hoursLeft)}h`;
   if (f.hoursLeft > 0) return `Recovering · ready in ${f.hoursLeft < 1 ? '<1' : Math.round(f.hoursLeft)}h`;
   return 'Lightly worked · good to go';
 }

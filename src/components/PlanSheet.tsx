@@ -7,7 +7,7 @@ import { Sheet } from './Sheet.tsx';
 
 export function PlanSheet({ onClose }: { onClose: () => void }) {
   const { entries, pbs, rec } = useData();
-  const { openMuscle, openFootball } = useUi();
+  const { openMuscle, openFootball, openSoreness } = useUi();
 
   return (
     <Sheet title={`${rec.weekday}’s plan`} subtitle={rec.headline} onClose={onClose}>
@@ -26,6 +26,7 @@ export function PlanSheet({ onClose }: { onClose: () => void }) {
           ))}
         </div>
       )}
+      <button className="link" onClick={openSoreness}>Feeling sore anywhere? Check in →</button>
       {rec.recovering.length > 0 && (
         <p className="warning">
           Still recovering: {rec.recovering.map((m) => MUSCLE_BY_ID[m].name).join(', ')} — give {rec.recovering.length === 1 ? 'it' : 'them'} another day.

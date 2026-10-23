@@ -6,6 +6,7 @@ import { FootballSheet } from './components/FootballSheet.tsx';
 import { MuscleSheet } from './components/MuscleSheet.tsx';
 import { PlanSheet } from './components/PlanSheet.tsx';
 import { SessionBar } from './components/SessionBar.tsx';
+import { SorenessSheet } from './components/SorenessSheet.tsx';
 import { SummarySheet } from './components/SummarySheet.tsx';
 import { SessionProvider } from './session.tsx';
 import { DataProvider, UiCtx, type SheetState } from './data.tsx';
@@ -88,6 +89,7 @@ export function App() {
       openPlan: () => setSheet({ type: 'plan' }),
       openFootball: () => setSheet({ type: 'football' }),
       openSummary: (sessionId: string) => setSheet({ type: 'summary', sessionId }),
+      openSoreness: () => setSheet({ type: 'soreness' }),
       notify: (message: string, tone: Toast['tone'] = 'default') => setToast({ id: Date.now(), message, tone }),
     }),
     [],
@@ -133,6 +135,7 @@ export function App() {
             )}
             {sheet?.type === 'plan' && <PlanSheet onClose={closeSheet} />}
             {sheet?.type === 'football' && <FootballSheet onClose={closeSheet} />}
+            {sheet?.type === 'soreness' && <SorenessSheet onClose={closeSheet} />}
             {sheet?.type === 'summary' && <SummarySheet sessionId={sheet.sessionId} onClose={closeSheet} />}
             <SessionBar />
             </SessionProvider>
