@@ -37,7 +37,7 @@ function useMode() {
 
 export function BodyPage() {
   const { fatigue, rec, activeSession, entries, exById, now } = useData();
-  const { openMuscle, openPlan, openFootball } = useUi();
+  const { openMuscle, openPlan, openFootball, openSoreness } = useUi();
   const { startWorkout } = useSession();
   const [mode, setMode] = useMode();
 
@@ -83,11 +83,14 @@ export function BodyPage() {
       <div className="quick-actions">
         {!activeSession && (
           <button className="quick coral" onClick={startWorkout}>
-            <Icon name="timer" size={18} /> Start workout
+            <Icon name="timer" size={18} /> Workout
           </button>
         )}
         <button className="quick pitch" onClick={openFootball}>
-          <Icon name="ball" size={18} /> Log football
+          <Icon name="ball" size={18} /> Football
+        </button>
+        <button className="quick" onClick={openSoreness}>
+          <Icon name="pulse" size={18} /> Sore?
         </button>
       </div>
 
@@ -112,7 +115,7 @@ export function BodyPage() {
             <div className="chips center">
               {recovering.map((m) => (
                 <button key={m.id} className="chip recovering" onClick={() => openMuscle(m.id)}>
-                  {m.name} · {Math.ceil(fatigue.get(m.id)!.hoursLeft)}h
+                  {m.name} · {Math.ceil(fatigue.get(m.id)!.hoursLeft)}h{fatigue.get(m.id)!.sore ? ' · sore' : ''}
                 </button>
               ))}
             </div>
