@@ -39,17 +39,42 @@ export interface Entry {
   note: string | null;
 }
 
+export type FootballType = 'match' | 'training' | 'futsal' | 'drills';
+
+export const FOOTBALL_TYPES: FootballType[] = ['match', 'training', 'futsal', 'drills'];
+
+export interface Activity {
+  id: string;
+  type: FootballType;
+  performedAt: string;
+  minutes: number;
+  /** Session effort, 1–10. */
+  rpe: number;
+  note: string | null;
+}
+
+/** Singleton record (id "settings"). Weekdays are 0 = Sunday … 6 = Saturday. */
+export interface Settings {
+  id: 'settings';
+  matchDays: number[];
+  trainingDays: number[];
+}
+
+export const DEFAULT_SETTINGS: Settings = { id: 'settings', matchDays: [6], trainingDays: [2, 5] };
+
 /**
  * Every user record kind. Records carry a client-generated string id so they
  * can be created offline and synced later; a put with an existing id overwrites.
  */
 export interface RecordMap {
   entry: Entry;
+  activity: Activity;
+  settings: Settings;
 }
 
 export type RecordKind = keyof RecordMap;
 
-const KINDS: Record<RecordKind, true> = { entry: true };
+const KINDS: Record<RecordKind, true> = { entry: true, activity: true, settings: true };
 export const RECORD_KINDS = Object.keys(KINDS) as RecordKind[];
 
 export type Records = { [K in RecordKind]: RecordMap[K][] };

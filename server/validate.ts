@@ -1,4 +1,4 @@
-import { EXERCISE_METRICS, type Exercise, type ExerciseMetric, type NewExercise, type RecordKind, type RecordMap, type WorkoutSet } from '../shared/types.ts';
+import { EXERCISE_METRICS, FOOTBALL_TYPES, type Exercise, type ExerciseMetric, type NewExercise, type RecordKind, type RecordMap, type WorkoutSet } from '../shared/types.ts';
 import { isMuscleId } from '../shared/muscles.ts';
 
 export class ValidationError extends Error {}
@@ -18,6 +18,16 @@ export function recordId(value: unknown): string {
 function isoDate(value: unknown, name: string): string {
   const ms = typeof value === 'string' ? Date.parse(value) : NaN;
   return Number.isNaN(ms) ? fail(`${name} must be an ISO date`) : new Date(ms).toISOString();
+}
+
+function int(value: unknown, name: string, min: number, max: number): number {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= min && n <= max ? n : fail(`${name} must be a whole number from ${min} to ${max}`);
+}
+
+function weekdays(value: unknown): number[] {
+  if (!Array.isArray(value)) return fail('Expected a list of weekdays');
+  return [...new Set(value.map((d) => int(d, 'weekday', 0, 6)))].sort();
 }
 
 function note(value: unknown): string | null {
@@ -66,6 +76,22 @@ export function makeValidators(getExercise: (id: number) => Exercise | undefined
         sets: sets(r.sets, exercise.metric),
         note: note(r.note),
       };
+    },
+    activity(raw) {
+      const r = object(raw);
+      return {
+        id: recordId(r.id),
+        type: FOOTBALL_TYPES.find((t) => t === r.type) ?? fail('Unknown activity type'),
+        performedAt: isoDate(r.performedAt, 'performedAt'),
+        minutes: int(r.minutes, 'minutes', 1, 300),
+        rpe: int(r.rpe, 'rpe', 1, 10),
+        note: note(r.note),
+      };
+    },
+    settings(raw) {
+      const r = object(raw);
+      if (r.id !== 'settings') fail('Settings id must be "settings"');
+      return { id: 'settings', matchDays: weekdays(r.matchDays), trainingDays: weekdays(r.trainingDays) };
     },
   };
 }
