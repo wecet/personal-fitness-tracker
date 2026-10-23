@@ -75,6 +75,7 @@ export function LineChart({
   height = 180,
   band,
   zeroBased = false,
+  area: showArea = true,
   extra,
 }: {
   points: LinePoint[];
@@ -86,6 +87,8 @@ export function LineChart({
   /** A shaded target range, e.g. the ACWR sweet spot. */
   band?: { from: number; to: number; label: string };
   zeroBased?: boolean;
+  /** Draw the ~10% wash under the line (off when a band already shades the plot). */
+  area?: boolean;
   /** Extra tooltip line per point. */
   extra?: (p: LinePoint) => string | null;
 }) {
@@ -120,6 +123,11 @@ export function LineChart({
 
   return (
     <div className="chart" ref={ref}>
+      {band && (
+        <div className="chart-legend">
+          <span><i className="band-swatch" />{band.label}</span>
+        </div>
+      )}
       <svg
         width={width}
         height={height}
@@ -132,10 +140,7 @@ export function LineChart({
         onPointerLeave={() => setActive(null)}
       >
         {band && (
-          <g>
-            <rect x={PAD.left} width={innerW} y={sy(band.to)} height={sy(band.from) - sy(band.to)} className="chart-band" />
-            <text x={PAD.left + 4} y={sy(band.to) + 12} className="chart-axis">{band.label}</text>
-          </g>
+          <rect x={PAD.left} width={innerW} y={sy(band.to)} height={sy(band.from) - sy(band.to)} className="chart-band" />
         )}
         {ticks.map((t) => (
           <g key={t}>
@@ -148,7 +153,7 @@ export function LineChart({
             {formatX(x)}
           </text>
         ))}
-        <path d={area} fill={color} opacity={0.1} />
+        {showArea && <path d={area} fill={color} opacity={0.1} />}
         <path d={line} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         {points.map((p, i) => p.mark && <circle key={i} cx={sx(p.x)} cy={sy(p.y)} r={4} fill={color} className="chart-dot" />)}
         <circle cx={sx(last.x)} cy={sy(last.y)} r={4} fill={color} className="chart-dot" />
@@ -204,6 +209,8 @@ export function StackedColumns({
   const sy = (v: number) => (v / yMax) * innerH;
   const base = PAD.top + innerH;
   const a = active != null ? bars[active] : null;
+  // Thin out x labels so neighbours (especially the last one) never collide.
+  const labelStep = Math.max(1, Math.ceil(bars.length / Math.max(2, Math.floor(innerW / 64))));
 
   return (
     <div className="chart" ref={ref}>
@@ -247,7 +254,7 @@ export function StackedColumns({
                 const d = `M${cx - barW / 2},${bottom}V${yTop + r}q0,-${r} ${r},-${r}H${cx + barW / 2 - r}q${r},0 ${r},${r}V${bottom}Z`;
                 return <path key={j} d={d} fill={series[j].color} />;
               })}
-              {(i % Math.ceil(bars.length / 6) === 0 || i === bars.length - 1) && (
+              {(i === bars.length - 1 || (i % labelStep === 0 && bars.length - 1 - i >= labelStep)) && (
                 <text x={cx} y={height - 6} textAnchor="middle" className="chart-axis">{b.label}</text>
               )}
             </g>
