@@ -3,6 +3,7 @@ import { Brand } from './components/Brand.tsx';
 import { Drawer, ROUTES, type Route } from './components/Drawer.tsx';
 import { Icon } from './components/Icon.tsx';
 import { FootballSheet } from './components/FootballSheet.tsx';
+import { HistorySheet } from './components/HistorySheet.tsx';
 import { MuscleSheet } from './components/MuscleSheet.tsx';
 import { PlanSheet } from './components/PlanSheet.tsx';
 import { SessionBar } from './components/SessionBar.tsx';
@@ -90,6 +91,7 @@ export function App() {
       openFootball: () => setSheet({ type: 'football' }),
       openSummary: (sessionId: string) => setSheet({ type: 'summary', sessionId }),
       openSoreness: () => setSheet({ type: 'soreness' }),
+      openHistory: (exerciseId: number) => setSheet({ type: 'history', exerciseId }),
       notify: (message: string, tone: Toast['tone'] = 'default') => setToast({ id: Date.now(), message, tone }),
     }),
     [],
@@ -135,6 +137,7 @@ export function App() {
             )}
             {sheet?.type === 'plan' && <PlanSheet onClose={closeSheet} />}
             {sheet?.type === 'football' && <FootballSheet onClose={closeSheet} />}
+            {sheet?.type === 'history' && <HistorySheet key={sheet.exerciseId} exerciseId={sheet.exerciseId} onClose={closeSheet} />}
             {sheet?.type === 'soreness' && <SorenessSheet onClose={closeSheet} />}
             {sheet?.type === 'summary' && <SummarySheet sessionId={sheet.sessionId} onClose={closeSheet} />}
             <SessionBar />

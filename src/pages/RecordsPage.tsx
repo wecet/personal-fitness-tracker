@@ -5,7 +5,7 @@ import { formatPb } from '../lib/stats.ts';
 
 export function RecordsPage() {
   const { exercises, pbs } = useData();
-  const { openMuscle } = useUi();
+  const { openHistory } = useUi();
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();
 
@@ -28,7 +28,7 @@ export function RecordsPage() {
               const pb = pbs.get(ex.id)!;
               return (
                 <li key={ex.id}>
-                  <button onClick={() => openMuscle(ex.muscle, ex.id)}>
+                  <button onClick={() => openHistory(ex.id)}>
                     <span>{ex.name}</span>
                     <span className="muted small">{new Date(pb.performedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                     <span className="pb-badge">{formatPb(pb, ex.metric)}</span>
