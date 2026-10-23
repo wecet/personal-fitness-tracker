@@ -3,7 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import { openDb } from './db.ts';
 import { isMuscleId } from '../shared/muscles.ts';
-import type { NewEntry, NewExercise, WorkoutSet } from '../shared/types.ts';
+import { EXERCISE_METRICS, type ExerciseMetric, type NewEntry, type NewExercise, type WorkoutSet } from '../shared/types.ts';
 
 const PORT = Number(process.env.PORT ?? 3000);
 const DB_PATH = process.env.DB_PATH ?? resolve('data/fitness.db');
@@ -49,24 +49,31 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
   throw new HttpError(400, 'Invalid JSON');
 }
 
-function parseSets(value: unknown): WorkoutSet[] {
+function parseSets(value: unknown, metric: ExerciseMetric): WorkoutSet[] {
   if (!Array.isArray(value) || value.length === 0 || value.length > 50) throw new HttpError(400, 'sets must be a non-empty array');
   return value.map((s) => {
-    const reps = Number(s?.reps);
-    const weight = Number(s?.weight);
-    if (!Number.isInteger(reps) || reps < 1 || reps > 1000) throw new HttpError(400, 'reps must be a positive integer');
+    const weight = Number(s?.weight ?? 0);
     if (!Number.isFinite(weight) || weight < 0 || weight > 2000) throw new HttpError(400, 'weight must be 0–2000 kg');
-    return { reps, weight: Math.round(weight * 100) / 100 };
+    const rounded = Math.round(weight * 100) / 100;
+    if (metric === 'time') {
+      const seconds = Number(s?.seconds);
+      if (!Number.isInteger(seconds) || seconds < 1 || seconds > 36_000) throw new HttpError(400, 'seconds must be a positive integer');
+      return { reps: 0, weight: rounded, seconds };
+    }
+    const reps = Number(s?.reps);
+    if (!Number.isInteger(reps) || reps < 1 || reps > 1000) throw new HttpError(400, 'reps must be a positive integer');
+    return { reps, weight: rounded };
   });
 }
 
 function parseEntry(body: Record<string, unknown>): NewEntry {
   const exerciseId = Number(body.exerciseId);
-  if (!db.exerciseExists(exerciseId)) throw new HttpError(400, 'Unknown exercise');
+  const exercise = db.getExercise(exerciseId);
+  if (!exercise) throw new HttpError(400, 'Unknown exercise');
   const performedAt = String(body.performedAt ?? '');
   if (Number.isNaN(Date.parse(performedAt))) throw new HttpError(400, 'performedAt must be an ISO date');
   const note = typeof body.note === 'string' && body.note.trim() ? body.note.trim().slice(0, 500) : null;
-  return { exerciseId, performedAt: new Date(performedAt).toISOString(), sets: parseSets(body.sets), note };
+  return { exerciseId, performedAt: new Date(performedAt).toISOString(), sets: parseSets(body.sets, exercise.metric), note };
 }
 
 function parseExercise(body: Record<string, unknown>): NewExercise {
@@ -74,7 +81,8 @@ function parseExercise(body: Record<string, unknown>): NewExercise {
   if (!name) throw new HttpError(400, 'name is required');
   if (!isMuscleId(body.muscle)) throw new HttpError(400, 'Unknown muscle');
   const secondary = Array.isArray(body.secondary) ? body.secondary.filter(isMuscleId) : [];
-  return { name, muscle: body.muscle, secondary };
+  const metric = EXERCISE_METRICS.find((m) => m === body.metric) ?? 'weight';
+  return { name, muscle: body.muscle, secondary, metric };
 }
 
 async function handleApi(req: IncomingMessage, res: ServerResponse, path: string) {

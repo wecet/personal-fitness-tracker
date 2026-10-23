@@ -1,13 +1,14 @@
 import type { MuscleId } from './muscles.ts';
+import type { ExerciseMetric } from './types.ts';
 
-/** [name, primary muscle, secondary muscles] — seeded into the database on startup. */
-export const EXERCISE_LIBRARY: [string, MuscleId, MuscleId[]][] = [
+/** [name, primary muscle, secondary muscles, metric] — seeded into the database on startup. */
+export const EXERCISE_LIBRARY: [string, MuscleId, MuscleId[], ExerciseMetric?][] = [
   ['Barbell Bench Press', 'chest', ['triceps', 'shoulders']],
   ['Incline Dumbbell Press', 'chest', ['shoulders', 'triceps']],
   ['Machine Chest Press', 'chest', ['triceps']],
   ['Cable Fly', 'chest', []],
-  ['Chest Dip', 'chest', ['triceps', 'shoulders']],
-  ['Push-Up', 'chest', ['triceps', 'shoulders', 'abs']],
+  ['Chest Dip', 'chest', ['triceps', 'shoulders'], 'bodyweight'],
+  ['Push-Up', 'chest', ['triceps', 'shoulders', 'abs'], 'bodyweight'],
 
   ['Overhead Press', 'shoulders', ['triceps', 'upperBack']],
   ['Dumbbell Shoulder Press', 'shoulders', ['triceps']],
@@ -30,23 +31,23 @@ export const EXERCISE_LIBRARY: [string, MuscleId, MuscleId[]][] = [
   ['Wrist Curl', 'forearms', []],
   ['Reverse Wrist Curl', 'forearms', []],
   ['Reverse Curl', 'forearms', ['biceps']],
-  ["Farmer's Carry", 'forearms', ['upperBack', 'abs']],
+  ["Farmer's Carry", 'forearms', ['upperBack', 'abs'], 'time'],
 
   ['Cable Crunch', 'abs', []],
-  ['Hanging Leg Raise', 'abs', ['hips']],
-  ['Ab Wheel Rollout', 'abs', ['lats']],
-  ['Plank', 'abs', ['obliques']],
+  ['Hanging Leg Raise', 'abs', ['hips'], 'bodyweight'],
+  ['Ab Wheel Rollout', 'abs', ['lats'], 'bodyweight'],
+  ['Plank', 'abs', ['obliques'], 'time'],
 
-  ['Russian Twist', 'obliques', ['abs']],
+  ['Russian Twist', 'obliques', ['abs'], 'bodyweight'],
   ['Cable Woodchopper', 'obliques', ['abs']],
-  ['Side Plank', 'obliques', ['abs']],
+  ['Side Plank', 'obliques', ['abs'], 'time'],
   ['Pallof Press', 'obliques', ['abs']],
 
   ['Barbell Shrug', 'upperBack', ['forearms']],
   ['Seated Cable Row', 'upperBack', ['lats', 'biceps']],
   ['Chest-Supported Row', 'upperBack', ['lats', 'biceps', 'shoulders']],
 
-  ['Pull-Up', 'lats', ['biceps', 'upperBack']],
+  ['Pull-Up', 'lats', ['biceps', 'upperBack'], 'bodyweight'],
   ['Lat Pulldown', 'lats', ['biceps', 'upperBack']],
   ['Barbell Row', 'lats', ['upperBack', 'biceps', 'lowerBack']],
   ['Single-Arm Dumbbell Row', 'lats', ['upperBack', 'biceps']],
@@ -63,7 +64,7 @@ export const EXERCISE_LIBRARY: [string, MuscleId, MuscleId[]][] = [
 
   ['Hip Adduction Machine', 'hips', []],
   ['Hip Abduction Machine', 'hips', ['glutes']],
-  ['Cossack Squat', 'hips', ['quads', 'glutes']],
+  ['Cossack Squat', 'hips', ['quads', 'glutes'], 'bodyweight'],
   ['Cable Hip Flexion', 'hips', ['abs']],
 
   ['Back Squat', 'quads', ['glutes', 'hips', 'lowerBack']],
@@ -76,7 +77,7 @@ export const EXERCISE_LIBRARY: [string, MuscleId, MuscleId[]][] = [
   ['Romanian Deadlift', 'hamstrings', ['glutes', 'lowerBack']],
   ['Lying Leg Curl', 'hamstrings', []],
   ['Seated Leg Curl', 'hamstrings', []],
-  ['Nordic Curl', 'hamstrings', []],
+  ['Nordic Curl', 'hamstrings', [], 'bodyweight'],
 
   ['Standing Calf Raise', 'calves', []],
   ['Seated Calf Raise', 'calves', []],
