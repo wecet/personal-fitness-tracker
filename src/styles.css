@@ -47,8 +47,7 @@ ul { list-style: none; margin: 0; padding: 0; }
 
 .muted { color: var(--muted); }
 .small { font-size: 12.5px; }
-.brand { font-weight: 800; letter-spacing: -0.02em; }
-.brand span { color: var(--coral); }
+.brand { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; letter-spacing: -0.03em; }
 
 /* ---------- chrome ---------- */
 

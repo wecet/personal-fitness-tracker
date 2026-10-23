@@ -1,10 +1,11 @@
 services:
-  # Joins your tailnet as "repmap" and serves the app over HTTPS at
-  # https://repmap.<your-tailnet>.ts.net — only reachable by your own devices.
+  # Joins your tailnet as "ember" and serves the app over HTTPS at
+  # https://ember.<your-tailnet>.ts.net — only reachable by your own devices.
   tailscale:
     image: tailscale/tailscale:stable
-    hostname: repmap
+    hostname: ember
     environment:
+      - TS_HOSTNAME=ember
       - TS_AUTHKEY=${TS_AUTHKEY:?Set TS_AUTHKEY in .env}
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_SERVE_CONFIG=/config/serve.json

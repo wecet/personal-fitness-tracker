@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from './api.ts';
+import { Brand } from './components/Brand.tsx';
 import { Drawer, ROUTES, type Route } from './components/Drawer.tsx';
 import { Icon } from './components/Icon.tsx';
 import { MuscleSheet } from './components/MuscleSheet.tsx';
@@ -83,7 +84,7 @@ export function App() {
     <UiCtx.Provider value={ui}>
       <header className="topbar">
         <button className="icon-btn" onClick={() => setDrawerOpen(true)} aria-label="Open menu"><Icon name="menu" /></button>
-        <h1>{route === 'body' ? <span className="brand">Rep<span>Map</span></span> : title}</h1>
+        <h1>{route === 'body' ? <Brand /> : title}</h1>
         <button className="icon-btn" onClick={ui.openPlan} aria-label="Today’s plan" disabled={!state}><Icon name="sparkle" /></button>
       </header>
       <Drawer open={drawerOpen} route={route} onClose={closeDrawer} />
