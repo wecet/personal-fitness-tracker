@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MUSCLE_BY_ID } from '../../shared/muscles.ts';
-import type { Entry } from '../../shared/types.ts';
+import type { Activity, Entry } from '../../shared/types.ts';
 import { Icon } from '../components/Icon.tsx';
 import { useData, useUi } from '../data.tsx';
+import { groupByDay, level, type DayLog } from '../lib/days.ts';
+import { EFFORT_LABEL, FOOTBALL_LABEL } from '../lib/football.ts';
 import { dateKey, formatSet, formatSets, parseDateKey, weekdayHabits, WEEKDAYS } from '../lib/stats.ts';
 
 const DAY = 86_400_000;
 const WEEKS_SHOWN = 53;
 const MON_FIRST = [1, 2, 3, 4, 5, 6, 0];
-
-/** Intensity bucket 0–4 by number of sets logged that day. */
-const level = (sets: number) => (sets === 0 ? 0 : sets < 9 ? 1 : sets < 16 ? 2 : sets < 23 ? 3 : 4);
 
 /** Monday on or before the given date. */
 function startOfWeek(d: Date) {
@@ -19,19 +18,8 @@ function startOfWeek(d: Date) {
   return s;
 }
 
-function useEntriesByDay(entries: Entry[]) {
-  return useMemo(() => {
-    const map = new Map<string, Entry[]>();
-    for (const e of entries) {
-      const k = dateKey(e.performedAt);
-      map.set(k, [...(map.get(k) ?? []), e]);
-    }
-    return map;
-  }, [entries]);
-}
-
 function ContributionGraph({ byDay, selected, onSelect }: {
-  byDay: Map<string, Entry[]>;
+  byDay: Map<string, DayLog>;
   selected: string;
   onSelect: (key: string) => void;
 }) {
@@ -62,16 +50,18 @@ function ContributionGraph({ byDay, selected, onSelect }: {
             </span>
             {days.map((d) => {
               const key = dateKey(d);
-              const dayEntries = byDay.get(key) ?? [];
-              const sets = dayEntries.reduce((n, e) => n + e.sets.length, 0);
+              const log = byDay.get(key);
+              const sets = log?.entries.reduce((n, e) => n + e.sets.length, 0) ?? 0;
+              const football = !!log?.activities.length;
               const future = key > todayKey;
+              const label = `${d.toDateString()}: ${sets} sets${football ? ', football' : ''}`;
               return (
                 <button
                   key={key}
-                  className={`cell l${level(sets)} ${key === selected ? 'selected' : ''}`}
+                  className={`cell l${level(log?.volume ?? 0)} ${football ? 'fb' : ''} ${key === selected ? 'selected' : ''}`}
                   style={future ? { visibility: 'hidden' } : undefined}
-                  title={`${d.toDateString()}: ${sets} sets`}
-                  aria-label={`${d.toDateString()}, ${sets} sets`}
+                  title={label}
+                  aria-label={label}
                   onClick={() => onSelect(key)}
                 />
               );
@@ -84,7 +74,7 @@ function ContributionGraph({ byDay, selected, onSelect }: {
 }
 
 function MonthCalendar({ byDay, selected, onSelect }: {
-  byDay: Map<string, Entry[]>;
+  byDay: Map<string, DayLog>;
   selected: string;
   onSelect: (key: string) => void;
 }) {
@@ -108,10 +98,11 @@ function MonthCalendar({ byDay, selected, onSelect }: {
         {MON_FIRST.map((d) => <span key={d} className="calendar-dow">{WEEKDAYS[d].slice(0, 1)}</span>)}
         {cells.map((d) => {
           const key = dateKey(d);
-          const sets = (byDay.get(key) ?? []).reduce((n, e) => n + e.sets.length, 0);
+          const log = byDay.get(key);
           const cls = [
             'day',
-            `l${level(sets)}`,
+            `l${level(log?.volume ?? 0)}`,
+            log?.activities.length && 'fb',
             d.getMonth() !== month.getMonth() && 'outside',
             key === todayKey && 'today',
             key === selected && 'selected',
@@ -127,7 +118,9 @@ function MonthCalendar({ byDay, selected, onSelect }: {
   );
 }
 
-function DayDetail({ dayKey, entries }: { dayKey: string; entries: Entry[] }) {
+function DayDetail({ dayKey, log }: { dayKey: string; log: DayLog | undefined }) {
+  const entries = log?.entries ?? [];
+  const activities = log?.activities ?? [];
   const { exById, prEntryIds, remove } = useData();
   const { openMuscle } = useUi();
   const date = parseDateKey(dayKey);
@@ -139,12 +132,31 @@ function DayDetail({ dayKey, entries }: { dayKey: string; entries: Entry[] }) {
     if (confirm(`Delete ${ex?.name} (${formatSets(e.sets, ex?.metric ?? 'weight')})?`)) remove('entry', e.id);
   }
 
+  function confirmDeleteActivity(a: Activity) {
+    if (confirm(`Delete ${FOOTBALL_LABEL[a.type].toLowerCase()} (${a.minutes} min)?`)) remove('activity', a.id);
+  }
+
   return (
     <section className="card day-detail">
       <h3>{title}</h3>
-      {entries.length === 0 ? (
-        <p className="muted">No workout logged.</p>
-      ) : (
+      {entries.length === 0 && activities.length === 0 && <p className="muted">No workout logged.</p>}
+      {activities.length > 0 && (
+        <ul className="day-entries football">
+          {activities.map((a) => (
+            <li key={a.id}>
+              <div>
+                <strong>⚽ {FOOTBALL_LABEL[a.type]}</strong>
+                <div className="set-list">
+                  <span>{a.minutes} min</span>
+                  <span>Effort {a.rpe} · {EFFORT_LABEL[a.rpe]}</span>
+                </div>
+              </div>
+              <button className="icon-btn small" onClick={() => confirmDeleteActivity(a)} aria-label="Delete football session"><Icon name="trash" size={16} /></button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {entries.length > 0 && (
         <>
           <div className="chips">
             {muscles.map((m) => (
@@ -177,21 +189,26 @@ function DayDetail({ dayKey, entries }: { dayKey: string; entries: Entry[] }) {
 }
 
 function Habits() {
-  const { entries, exById, now } = useData();
-  const habits = weekdayHabits(entries, exById, new Date(now));
-  const max = Math.max(1, ...habits.map((h) => h.sessions));
+  const { entries, activities, exById, now } = useData();
+  const habits = weekdayHabits(entries, exById, new Date(now), activities);
+  const max = Math.max(1, ...habits.map((h) => Math.max(h.sessions, h.football)));
   return (
     <section className="card">
       <h3>Weekly rhythm <span className="muted small">· last 12 weeks</span></h3>
       <ul className="habits">
         {MON_FIRST.map((d) => {
           const h = habits[d];
+          const gym = h.sessions >= 2 && h.focus ? h.focus : h.sessions ? 'Occasional' : null;
+          const football = h.football >= 2 ? 'Football' : null;
           return (
             <li key={d}>
               <span className="habit-day">{WEEKDAYS[d].slice(0, 3)}</span>
-              <span className="habit-bar"><span style={{ width: `${(h.sessions / max) * 100}%` }} /></span>
-              <span className="habit-focus">{h.sessions >= 2 && h.focus ? h.focus : h.sessions ? 'Occasional' : 'Rest'}</span>
-              <span className="muted small">{h.sessions}/{h.occurrences}</span>
+              <span className="habit-bar">
+                <span style={{ width: `${(h.sessions / max) * 100}%` }} />
+                {h.football > 0 && <span className="fb" style={{ width: `${(h.football / max) * 100}%` }} />}
+              </span>
+              <span className="habit-focus">{[gym, football].filter(Boolean).join(' + ') || 'Rest'}</span>
+              <span className="muted small">{Math.max(h.sessions, h.football)}/{h.occurrences}</span>
             </li>
           );
         })}
@@ -201,8 +218,8 @@ function Habits() {
 }
 
 export function TrackerPage() {
-  const { entries, now } = useData();
-  const byDay = useEntriesByDay(entries);
+  const { entries, activities, now } = useData();
+  const byDay = useMemo(() => groupByDay(entries, activities), [entries, activities]);
   const [selected, setSelected] = useState(() => dateKey(new Date()));
 
   const daysSince = (n: number) => [...byDay.keys()].filter((k) => parseDateKey(k).getTime() > now - n * DAY).length;
@@ -222,11 +239,13 @@ export function TrackerPage() {
           <span>Less</span>
           {[0, 1, 2, 3, 4].map((l) => <span key={l} className={`cell l${l}`} />)}
           <span>More</span>
+          <span className="cell fb l0" />
+          <span>Football</span>
         </div>
       </section>
       <div className="tracker-split">
         <section className="card"><MonthCalendar byDay={byDay} selected={selected} onSelect={setSelected} /></section>
-        <DayDetail dayKey={selected} entries={byDay.get(selected) ?? []} />
+        <DayDetail dayKey={selected} log={byDay.get(selected)} />
       </div>
       <Habits />
     </div>
