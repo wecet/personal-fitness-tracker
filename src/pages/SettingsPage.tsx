@@ -1,5 +1,5 @@
 import { useData } from '../data.tsx';
-import { WEEKDAYS } from '../lib/stats.ts';
+import { formatDuration, WEEKDAYS } from '../lib/stats.ts';
 import type { Settings } from '../../shared/types.ts';
 
 const MON_FIRST = [1, 2, 3, 4, 5, 6, 0];
@@ -37,6 +37,18 @@ export function SettingsPage() {
         <p className="muted small">Ember plans your gym days around these — no heavy legs the day before or after a match, or on training days.</p>
         <DayPicker label="Match days" hint="Usually one day a week." value={settings.matchDays} onChange={(matchDays) => update({ matchDays })} />
         <DayPicker label="Training days" hint="Include days you only sometimes train." value={settings.trainingDays} onChange={(trainingDays) => update({ trainingDays })} />
+      </section>
+      <section className="card">
+        <h3>Rest timer</h3>
+        <p className="muted small">Default rest between sets during a workout. You can nudge it ±15s while it runs.</p>
+        <div className="day-picker" role="radiogroup" aria-label="Rest duration">
+          {[45, 60, 90, 120, 150, 180, 240].map((s) => (
+            <button key={s} type="button" role="radio" aria-checked={settings.restSeconds === s}
+              className={settings.restSeconds === s ? 'active' : ''} onClick={() => update({ restSeconds: s })}>
+              {formatDuration(s)}
+            </button>
+          ))}
+        </div>
       </section>
     </div>
   );

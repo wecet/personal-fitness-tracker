@@ -2,9 +2,11 @@ import { MUSCLES } from '../../shared/muscles.ts';
 import { BodyMap } from '../components/BodyMap.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { useData, useUi } from '../data.tsx';
+import { useSession } from '../session.tsx';
 
 export function BodyPage() {
-  const { fatigue, rec } = useData();
+  const { fatigue, rec, activeSession } = useData();
+  const { startWorkout } = useSession();
   const { openMuscle, openPlan, openFootball } = useUi();
   const recovering = MUSCLES.filter((m) => (fatigue.get(m.id)?.hoursLeft ?? 0) > 0).sort(
     (a, b) => fatigue.get(b.id)!.hoursLeft - fatigue.get(a.id)!.hoursLeft,
@@ -25,6 +27,11 @@ export function BodyPage() {
       </button>
 
       <div className="quick-actions">
+        {!activeSession && (
+          <button className="quick coral" onClick={startWorkout}>
+            <Icon name="timer" size={18} /> Start workout
+          </button>
+        )}
         <button className="quick pitch" onClick={openFootball}>
           <Icon name="ball" size={18} /> Log football
         </button>

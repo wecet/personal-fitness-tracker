@@ -3,7 +3,7 @@ import { api } from './api.ts';
 import { beats, bestSet, muscleFatigue, personalBests, recommend, type MuscleFatigue, type PersonalBest, type Recommendation } from './lib/stats.ts';
 import { newId, store } from './lib/store.ts';
 import type { MuscleId } from '../shared/muscles.ts';
-import { DEFAULT_SETTINGS, type Activity, type AppState, type Entry, type Exercise, type NewExercise, type RecordKind, type RecordMap, type Records, type Settings } from '../shared/types.ts';
+import { DEFAULT_SETTINGS, type Activity, type AppState, type Entry, type Exercise, type NewExercise, type RecordKind, type RecordMap, type Records, type Settings, type WorkoutSession } from '../shared/types.ts';
 
 export type NewEntry = Omit<Entry, 'id' | 'note'> & { note?: string | null };
 
@@ -14,6 +14,9 @@ interface AppData {
   entries: Entry[];
   /** Football sessions, sorted oldest → newest. */
   activities: Activity[];
+  /** Gym sessions, sorted by start. */
+  sessions: WorkoutSession[];
+  activeSession: WorkoutSession | null;
   settings: Settings;
   rec: Recommendation;
   exById: Map<number, Exercise>;
@@ -61,7 +64,9 @@ export function DataProvider({ state, children }: { state: AppState; children: R
   const exById = useMemo(() => new Map(exercises.map((e) => [e.id, e])), [exercises]);
   const { best: pbs, prEntryIds } = useMemo(() => personalBests(entries, exById), [entries, exById]);
   const activities = useMemo(() => [...records.activity].sort(byPerformedAt), [records.activity]);
-  const settings = records.settings[0] ?? DEFAULT_SETTINGS;
+  const settings = useMemo(() => ({ ...DEFAULT_SETTINGS, ...records.settings[0] }), [records.settings]);
+  const sessions = useMemo(() => [...records.session].sort((a, b) => a.startedAt.localeCompare(b.startedAt)), [records.session]);
+  const activeSession = sessions.findLast((s) => !s.endedAt) ?? null;
   const fatigue = useMemo(() => muscleFatigue(entries, exById, now, activities), [entries, exById, now, activities]);
   const rec = useMemo(
     () => recommend({ entries, activities, exercises, exById, fatigue, settings, now: new Date(now) }),
@@ -75,14 +80,16 @@ export function DataProvider({ state, children }: { state: AppState; children: R
 
   const addEntry = useCallback(
     (input: NewEntry) => {
-      const entry: Entry = { note: null, ...input, id: newId() };
+      // Sets logged during a workout (not back-dated before it) belong to that session.
+      const inSession = activeSession && input.performedAt >= activeSession.startedAt;
+      const entry: Entry = { note: null, sessionId: inSession ? activeSession.id : null, ...input, id: newId() };
       const prev = pbs.get(entry.exerciseId);
       const metric = exById.get(entry.exerciseId)?.metric ?? 'weight';
       const isPb = !!prev && beats(bestSet(entry.sets, metric), prev, metric);
       put('entry', entry);
       return { entry, isPb };
     },
-    [pbs, exById, put],
+    [pbs, exById, put, activeSession],
   );
 
   const addExercise = useCallback(async (input: NewExercise) => {
@@ -92,20 +99,26 @@ export function DataProvider({ state, children }: { state: AppState; children: R
   }, []);
 
   const value = useMemo(
-    () => ({ exercises, records, entries, activities, settings, rec, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise }),
-    [exercises, records, entries, activities, settings, rec, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise],
+    () => ({ exercises, records, entries, activities, sessions, activeSession, settings, rec, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise }),
+    [exercises, records, entries, activities, sessions, activeSession, settings, rec, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 // ---------- UI actions shared across pages ----------
 
-export type SheetState = { type: 'muscle'; muscle: MuscleId; exerciseId?: number } | { type: 'plan' } | { type: 'football' } | null;
+export type SheetState =
+  | { type: 'muscle'; muscle: MuscleId; exerciseId?: number }
+  | { type: 'plan' }
+  | { type: 'football' }
+  | { type: 'summary'; sessionId: string }
+  | null;
 
 interface UiActions {
   openMuscle(muscle: MuscleId, exerciseId?: number): void;
   openPlan(): void;
   openFootball(): void;
+  openSummary(sessionId: string): void;
   notify(message: string, tone?: 'default' | 'pb' | 'error'): void;
 }
 

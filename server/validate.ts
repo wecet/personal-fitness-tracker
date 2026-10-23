@@ -75,6 +75,17 @@ export function makeValidators(getExercise: (id: number) => Exercise | undefined
         performedAt: isoDate(r.performedAt, 'performedAt'),
         sets: sets(r.sets, exercise.metric),
         note: note(r.note),
+        sessionId: r.sessionId == null ? null : recordId(r.sessionId),
+      };
+    },
+    session(raw) {
+      const r = object(raw);
+      return {
+        id: recordId(r.id),
+        startedAt: isoDate(r.startedAt, 'startedAt'),
+        endedAt: r.endedAt == null ? null : isoDate(r.endedAt, 'endedAt'),
+        rpe: r.rpe == null ? null : int(r.rpe, 'rpe', 1, 10),
+        note: note(r.note),
       };
     },
     activity(raw) {
@@ -91,7 +102,12 @@ export function makeValidators(getExercise: (id: number) => Exercise | undefined
     settings(raw) {
       const r = object(raw);
       if (r.id !== 'settings') fail('Settings id must be "settings"');
-      return { id: 'settings', matchDays: weekdays(r.matchDays), trainingDays: weekdays(r.trainingDays) };
+      return {
+        id: 'settings',
+        matchDays: weekdays(r.matchDays),
+        trainingDays: weekdays(r.trainingDays),
+        restSeconds: r.restSeconds == null ? 90 : int(r.restSeconds, 'restSeconds', 15, 600),
+      };
     },
   };
 }

@@ -155,14 +155,14 @@ input:focus { outline: none; border-color: var(--coral); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .toast {
-  position: fixed; left: 50%; bottom: calc(var(--safe-bottom) + 20px); z-index: 60;
+  position: fixed; left: 50%; top: calc(var(--safe-top) + 60px); z-index: 60;
   max-width: calc(100vw - 32px); padding: 12px 18px; border-radius: 12px;
   background: var(--text); color: var(--bg); font-weight: 600; box-shadow: 0 10px 30px rgb(0 0 0 / 0.4);
   transform: translateX(-50%); animation: toast-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .toast.pb { background: var(--coral); color: var(--coral-ink); }
 .toast.error { background: #ff5252; color: #fff; }
-@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 16px); } }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, -16px); } }
 
 /* ---------- sheet ---------- */
 
@@ -339,6 +339,38 @@ input[type='range'] { width: 100%; accent-color: var(--pitch); height: 28px; }
 .day-picker button { height: 38px; border-radius: 9px; font-size: 13px; font-weight: 600; background: var(--surface-2); color: var(--muted); }
 .day-picker button.active { background: var(--coral); color: var(--coral-ink); }
 .day-entries.football li { border-top: 0; border-bottom: 1px solid var(--border); }
+
+/* ---------- workout session ---------- */
+
+main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
+.session-bar {
+  position: fixed; z-index: 30; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--safe-bottom) + 12px); width: min(560px, calc(100vw - 24px));
+  display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; overflow: hidden;
+  background: color-mix(in srgb, var(--surface-2) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 12px 40px rgb(0 0 0 / 0.45);
+}
+.session-bar.resting { border-color: color-mix(in srgb, var(--coral) 55%, var(--border)); }
+.rest-progress { position: absolute; left: 0; top: 0; height: 3px; background: var(--coral); transition: width 0.25s linear; }
+.session-info, .rest-controls { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.session-info strong { font-variant-numeric: tabular-nums; }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--coral); animation: pulse 1.4s ease-in-out infinite; }
+.rest-time { font-size: 24px; font-weight: 800; color: var(--coral); font-variant-numeric: tabular-nums; min-width: 64px; }
+.pill { padding: 6px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; background: var(--surface); border: 1px solid var(--border); white-space: nowrap; }
+.session-info .pill { margin-left: auto; }
+.btn.finish { height: 38px; padding: 0 14px; flex-shrink: 0; }
+.logger-hint { margin: 0; }
+.set-done { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--border); font-size: 13px; color: var(--muted); }
+.set-done.done { background: var(--coral); border-color: var(--coral); color: var(--coral-ink); }
+.summary-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.summary-stats div { display: flex; flex-direction: column; padding: 10px; border-radius: 12px; background: var(--surface-2); }
+.summary-stats strong { font-size: 18px; }
+.summary-stats span { font-size: 12px; color: var(--muted); }
+.summary-prs { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.session-row { width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 0; text-align: left; border-bottom: 1px solid var(--border); }
+.session-row > span:first-child { font-weight: 600; }
+.session-row > span:nth-child(2) { flex: 1; }
+.session-row svg { color: var(--muted); }
 
 /* ---------- tracker ---------- */
 
