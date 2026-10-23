@@ -14,6 +14,13 @@ export interface Exercise {
   custom: boolean;
 }
 
+export interface NewExercise {
+  name: string;
+  muscle: MuscleId;
+  secondary?: MuscleId[];
+  metric?: ExerciseMetric;
+}
+
 export interface WorkoutSet {
   /** 0 for timed sets. */
   reps: number;
@@ -24,7 +31,7 @@ export interface WorkoutSet {
 }
 
 export interface Entry {
-  id: number;
+  id: string;
   exerciseId: number;
   /** ISO timestamp. */
   performedAt: string;
@@ -32,21 +39,34 @@ export interface Entry {
   note: string | null;
 }
 
+/**
+ * Every user record kind. Records carry a client-generated string id so they
+ * can be created offline and synced later; a put with an existing id overwrites.
+ */
+export interface RecordMap {
+  entry: Entry;
+}
+
+export type RecordKind = keyof RecordMap;
+
+const KINDS: Record<RecordKind, true> = { entry: true };
+export const RECORD_KINDS = Object.keys(KINDS) as RecordKind[];
+
+export type Records = { [K in RecordKind]: RecordMap[K][] };
+
+export const emptyRecords = (): Records =>
+  Object.fromEntries(RECORD_KINDS.map((k) => [k, []])) as unknown as Records;
+
+export type SyncOp = {
+  [K in RecordKind]: { op: 'put'; kind: K; record: RecordMap[K] } | { op: 'delete'; kind: K; id: string };
+}[RecordKind];
+
 export interface AppState {
   exercises: Exercise[];
-  entries: Entry[];
+  records: Records;
 }
 
-export interface NewEntry {
-  exerciseId: number;
-  performedAt: string;
-  sets: WorkoutSet[];
-  note?: string | null;
-}
-
-export interface NewExercise {
-  name: string;
-  muscle: MuscleId;
-  secondary?: MuscleId[];
-  metric?: ExerciseMetric;
+export interface SyncResult {
+  state: AppState;
+  rejected: { op: SyncOp; error: string }[];
 }
