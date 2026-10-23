@@ -4,11 +4,19 @@ A personal workout tracker that runs as a web app. Tap a muscle on the body map 
 
 ## Features
 
-- **Body map:** a shaded 2.5D front/back figure. Tap a muscle to log a workout, swipe or press the turn button to see the other side. Trained muscles get a red fill that fades over that muscle's recommended rest period (36–72h). Exercises also fade their secondary muscles at half strength.
-- **Logging and PBs:** each exercise shows its PB (for example `PB 25 kg × 8`). Expand it to log sets (reps × kg). The form prefills from your last session and tells you when you're about to beat your PB.
-- **Daily plan:** learns which muscles you train on each weekday over the last 12 weeks ("Mondays are usually lower body days") and suggests exercises, skipping muscles that are still recovering. It opens once a day until you log something.
-- **Tracker:** a contribution graph, a month calendar (tap a day to see or delete entries), and your weekly rhythm.
-- **Personal Bests:** every PB, searchable.
+- **Body map:** a shaded 2.5D front/back figure. Tap a muscle to log a workout; swipe or press the turn button to see the other side. Three views:
+  - **Recovery:** trained muscles fill red and fade over their rest period.
+  - **Volume:** weekly sets against a 10–20 target.
+  - **Neglected:** muscles with no direct work in 10+ days pulse amber.
+- **Logging and PBs:** every exercise shows its PB. Exercises are weighted (reps × kg), bodyweight (reps, optional added kg) or timed (with a stopwatch). The logger suggests your next target and has a plate calculator.
+- **Workouts:** start a session to get a rest timer between sets and a finish summary (duration, volume, PBs, effort).
+- **Routines:** save routines, start one as a guided workout, or quick-log the whole thing in one tap.
+- **Football:** log matches and training (minutes × effort). Football loads your legs on the body map, and the daily plan works around your match and training days (set in Settings).
+- **Daily plan:** learns your weekly routine and suggests exercises, skipping recovering or sore muscles. Use the soreness check-in when something aches.
+- **Training load:** your acute:chronic workload ratio across gym and football, with a warning when load spikes.
+- **Tracker:** a contribution graph, a calendar with day detail, and your weekly rhythm.
+- **Progress:** per-exercise history with estimated 1RM, Personal Bests, Bodyweight trend and Year in Review.
+- **Works offline:** changes save on the device and sync when you're back online.
 - **Export backup:** in the drawer, downloads all your data as JSON.
 
 ## Run locally (development)
