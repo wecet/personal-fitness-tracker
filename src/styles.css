@@ -309,6 +309,7 @@ input:focus { outline: none; border-color: var(--coral); }
   background: var(--surface); border: 1px solid var(--border);
 }
 .quick.pitch { color: var(--pitch); border-color: color-mix(in srgb, var(--pitch) 35%, var(--border)); }
+.quick svg { flex-shrink: 0; }
 .quick.coral { color: var(--coral); border-color: color-mix(in srgb, var(--coral) 35%, var(--border)); }
 
 .md-tag {
@@ -455,3 +456,9 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 .center-text { text-align: center; margin: 0; }
+
+.chip.sore-1 { background: color-mix(in srgb, var(--fatigue) 18%, transparent); border-color: color-mix(in srgb, var(--fatigue) 40%, transparent); color: #ffb0b0; }
+.chip.sore-2 { background: color-mix(in srgb, var(--fatigue) 40%, transparent); border-color: var(--fatigue); color: #fff; }
+.sore-level { font-weight: 400; opacity: 0.85; }
+.sore-group .section-title { margin-bottom: 8px; }
+.link { align-self: flex-start; color: var(--coral); font-size: 14px; font-weight: 600; }
