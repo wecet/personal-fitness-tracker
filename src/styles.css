@@ -554,3 +554,9 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .plate-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .plate-list .chip { display: inline-flex; align-items: center; gap: 6px; }
 .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+/* ---------- bodyweight ---------- */
+
+.bw-form { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; }
+.bw-form .date-input { height: 44px; }
+.day-entries li > span:first-child { flex: 1; }
