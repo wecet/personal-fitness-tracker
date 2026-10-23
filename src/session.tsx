@@ -12,7 +12,7 @@ interface SessionActions {
   startRest(seconds?: number): void;
   adjustRest(deltaSeconds: number): void;
   skipRest(): void;
-  startWorkout(): void;
+  startWorkout(routineId?: string): void;
 }
 
 const REST_KEY = 'ember-rest';
@@ -100,9 +100,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setRest({ endsAt, total: Math.max(rest.total + delta, 1) });
       },
       skipRest: () => setRest(null),
-      startWorkout() {
+      startWorkout(routineId) {
         unlockAudio();
-        put('session', { id: newId(), startedAt: new Date().toISOString(), endedAt: null, rpe: null, note: null });
+        put('session', { id: newId(), startedAt: new Date().toISOString(), endedAt: null, rpe: null, note: null, routineId: routineId ?? null });
       },
     }),
     [rest, settings.restSeconds, setRest, put],

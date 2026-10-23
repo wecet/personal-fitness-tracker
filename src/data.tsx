@@ -4,7 +4,7 @@ import { beats, bestSet, muscleFatigue, personalBests, recommend, type MuscleFat
 import { dailyLoad, workload, type DayLoad, type Workload } from './lib/load.ts';
 import { newId, store } from './lib/store.ts';
 import type { MuscleId } from '../shared/muscles.ts';
-import { DEFAULT_SETTINGS, type Activity, type AppState, type Entry, type Exercise, type NewExercise, type RecordKind, type RecordMap, type Records, type Settings, type WorkoutSession } from '../shared/types.ts';
+import { DEFAULT_SETTINGS, type Activity, type AppState, type Entry, type Exercise, type NewExercise, type RecordKind, type RecordMap, type Records, type Routine, type Settings, type WorkoutSession } from '../shared/types.ts';
 
 export type NewEntry = Omit<Entry, 'id' | 'note'> & { note?: string | null };
 
@@ -18,6 +18,7 @@ interface AppData {
   /** Gym sessions, sorted by start. */
   sessions: WorkoutSession[];
   activeSession: WorkoutSession | null;
+  routines: Routine[];
   settings: Settings;
   rec: Recommendation;
   /** Training load per local day. */
@@ -72,6 +73,7 @@ export function DataProvider({ state, children }: { state: AppState; children: R
   const settings = useMemo(() => ({ ...DEFAULT_SETTINGS, ...records.settings[0] }), [records.settings]);
   const sessions = useMemo(() => [...records.session].sort((a, b) => a.startedAt.localeCompare(b.startedAt)), [records.session]);
   const activeSession = sessions.findLast((s) => !s.endedAt) ?? null;
+  const routines = useMemo(() => [...records.routine].sort((a, b) => a.name.localeCompare(b.name)), [records.routine]);
   const fatigue = useMemo(
     () => muscleFatigue(entries, exById, now, activities, records.soreness),
     [entries, exById, now, activities, records.soreness],
@@ -110,13 +112,18 @@ export function DataProvider({ state, children }: { state: AppState; children: R
   }, []);
 
   const value = useMemo(
-    () => ({ exercises, records, entries, activities, sessions, activeSession, settings, rec, daily, firstDay, load, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise }),
-    [exercises, records, entries, activities, sessions, activeSession, settings, rec, daily, firstDay, load, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise],
+    () => ({ exercises, records, entries, activities, sessions, activeSession, routines, settings, rec, daily, firstDay, load, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise }),
+    [exercises, records, entries, activities, sessions, activeSession, routines, settings, rec, daily, firstDay, load, exById, pbs, prEntryIds, fatigue, now, put, remove, addEntry, addExercise],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 // ---------- UI actions shared across pages ----------
+
+export interface ToastAction {
+  label: string;
+  run: () => void;
+}
 
 export type SheetState =
   | { type: 'muscle'; muscle: MuscleId; exerciseId?: number }
@@ -125,6 +132,7 @@ export type SheetState =
   | { type: 'summary'; sessionId: string }
   | { type: 'soreness' }
   | { type: 'history'; exerciseId: number }
+  | { type: 'routine'; routineId?: string }
   | null;
 
 interface UiActions {
@@ -134,7 +142,8 @@ interface UiActions {
   openSummary(sessionId: string): void;
   openSoreness(): void;
   openHistory(exerciseId: number): void;
-  notify(message: string, tone?: 'default' | 'pb' | 'error'): void;
+  openRoutine(routineId?: string): void;
+  notify(message: string, tone?: 'default' | 'pb' | 'error', action?: ToastAction): void;
 }
 
 export const UiCtx = createContext<UiActions | null>(null);

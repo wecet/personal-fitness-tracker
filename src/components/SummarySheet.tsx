@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { MUSCLE_BY_ID } from '../../shared/muscles.ts';
 import { useData, useUi } from '../data.tsx';
 import { EFFORT_LABEL } from '../lib/football.ts';
+import { refreshFromSession, routineFromSession } from '../lib/routines.ts';
 import { entryVolume, formatMinutes, formatPb } from '../lib/stats.ts';
 import { Sheet } from './Sheet.tsx';
 
 export function SummarySheet({ sessionId, onClose }: { sessionId: string; onClose: () => void }) {
-  const { sessions, entries, exById, prEntryIds, pbs, put, remove, now } = useData();
+  const { sessions, entries, exById, prEntryIds, pbs, put, remove, now, routines } = useData();
   const { notify } = useUi();
   const session = sessions.find((s) => s.id === sessionId);
   const [rpe, setRpe] = useState(session?.rpe ?? 7);
+  const [routineName, setRoutineName] = useState('');
   if (!session) return null;
 
   const finished = !!session.endedAt;
@@ -23,6 +25,9 @@ export function SummarySheet({ sessionId, onClose }: { sessionId: string; onClos
 
   function save() {
     put('session', { ...session!, endedAt: session!.endedAt ?? new Date().toISOString(), rpe });
+    const routine = routines.find((r) => r.id === session!.routineId);
+    if (routine && !finished) put('routine', refreshFromSession(routine, mine));
+    if (routineName.trim()) put('routine', routineFromSession(routineName.trim(), mine));
     notify(`Workout saved · ${formatMinutes(minutes)} · ${sets} sets`, prs.length ? 'pb' : 'default');
     onClose();
   }
@@ -72,6 +77,9 @@ export function SummarySheet({ sessionId, onClose }: { sessionId: string; onClos
               ))}
             </div>
           </div>
+          {!session.routineId && (
+            <input placeholder="Save as routine (optional name)" value={routineName} onChange={(e) => setRoutineName(e.target.value)} maxLength={60} />
+          )}
           <button className="btn primary block" onClick={save}>{finished ? 'Update' : 'Save workout'}</button>
         </>
       ) : (

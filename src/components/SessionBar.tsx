@@ -12,8 +12,8 @@ const clock = (totalSeconds: number) => {
 
 /** Sticky bar shown while a workout is in progress: elapsed time, rest timer and Finish. */
 export function SessionBar() {
-  const { activeSession, entries, settings } = useData();
-  const { openSummary } = useUi();
+  const { activeSession, entries, settings, routines, exById } = useData();
+  const { openSummary, openMuscle } = useUi();
   const { rest, startRest, adjustRest, skipRest } = useSession();
   const [now, setNow] = useState(Date.now());
 
@@ -24,12 +24,23 @@ export function SessionBar() {
   }, [activeSession, rest]);
 
   if (!activeSession) return null;
-  const sets = entries.filter((e) => e.sessionId === activeSession.id).reduce((n, e) => n + e.sets.length, 0);
+  const mine = entries.filter((e) => e.sessionId === activeSession.id);
+  const sets = mine.reduce((n, e) => n + e.sets.length, 0);
+  const routine = routines.find((r) => r.id === activeSession.routineId);
+  const done = new Set(mine.map((e) => e.exerciseId));
+  const next = routine?.items.find((i) => !done.has(i.exerciseId));
+  const nextEx = next && exById.get(next.exerciseId);
   const elapsed = Math.max(0, Math.floor((now - Date.parse(activeSession.startedAt)) / 1000));
   const restLeft = rest ? Math.max(0, Math.ceil((rest.endsAt - now) / 1000)) : 0;
 
   return (
-    <div className={`session-bar ${rest ? 'resting' : ''}`} role="region" aria-label="Workout in progress">
+    <div className={`session-bar ${rest ? 'resting' : ''} ${routine ? 'with-routine' : ''}`} role="region" aria-label="Workout in progress">
+      {routine && (
+        <button className="routine-next" onClick={() => nextEx && openMuscle(nextEx.muscle, nextEx.id)} disabled={!nextEx}>
+          <span className="muted">{routine.name} · {Math.min(done.size, routine.items.length)}/{routine.items.length}</span>
+          <strong>{nextEx ? `Next: ${nextEx.name} ›` : 'All done — finish up'}</strong>
+        </button>
+      )}
       {rest && <span className="rest-progress" style={{ width: `${(restLeft / rest.total) * 100}%` }} />}
       {rest ? (
         <div className="rest-controls">
