@@ -1,9 +1,8 @@
 import { useRef, useState, type PointerEvent } from 'react';
 import { MUSCLE_BY_ID, type MuscleId } from '../../shared/muscles.ts';
 import { BACK, BACK_DETAILS, FRONT, FRONT_DETAILS, HEAD, SILHOUETTE, VIEWBOX } from './bodyPaths.ts';
-import { Icon } from './Icon.tsx';
 
-type Side = 'front' | 'back';
+export type Side = 'front' | 'back';
 
 export type OverlayTone = 'fatigue' | 'volume' | 'neglect';
 
@@ -101,19 +100,20 @@ function Figure({ side, overlay, tone, suggested, hover, onHover, onSelect }: Fi
   );
 }
 
-export function BodyMap({ overlay, tone, suggested, onSelect }: {
+export function BodyMap({ overlay, tone, suggested, onSelect, side, onSideChange }: {
   overlay: Map<MuscleId, number>;
   tone: OverlayTone;
   suggested: MuscleId[];
   onSelect: (m: MuscleId) => void;
+  side: Side;
+  onSideChange: (side: Side) => void;
 }) {
-  const [side, setSide] = useState<Side>('front');
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [hover, setHover] = useState<MuscleId | null>(null);
   const drag = useRef<{ x: number; moved: boolean } | null>(null);
   const suppressClick = useRef(false);
 
-  const flip = () => setSide((s) => (s === 'front' ? 'back' : 'front'));
+  const flip = () => onSideChange(side === 'front' ? 'back' : 'front');
 
   const onPointerDown = (e: PointerEvent) => {
     drag.current = { x: e.clientX, moved: false };
@@ -161,20 +161,7 @@ export function BodyMap({ overlay, tone, suggested, onSelect }: {
           </div>
         </div>
       </div>
-
-      <div className="bodymap-controls">
-        <div className="segmented" role="tablist">
-          {(['front', 'back'] as const).map((s) => (
-            <button key={s} role="tab" aria-selected={side === s} className={side === s ? 'active' : ''} onClick={() => setSide(s)}>
-              {s === 'front' ? 'Front' : 'Back'}
-            </button>
-          ))}
-        </div>
-        <button className="icon-btn" onClick={flip} aria-label="Turn figure around">
-          <Icon name="flip" />
-        </button>
-      </div>
-      <p className="hover-label">{hover ? MUSCLE_BY_ID[hover].name : 'Tap a muscle to log a workout · swipe to turn'}</p>
+      <p className="hover-label" aria-live="polite">{hover ? MUSCLE_BY_ID[hover].name : '\u00a0'}</p>
     </div>
   );
 }
