@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { Icon } from '../components/Icon.tsx';
+import { PlateSheet } from '../components/PlateSheet.tsx';
 import { useData } from '../data.tsx';
 import { formatDuration, WEEKDAYS } from '../lib/stats.ts';
 import type { Settings } from '../../shared/types.ts';
@@ -29,6 +32,7 @@ function DayPicker({ label, hint, value, onChange }: {
 export function SettingsPage() {
   const { settings, put } = useData();
   const update = (patch: Partial<Settings>) => put('settings', { ...settings, ...patch });
+  const [plates, setPlates] = useState(false);
 
   return (
     <div className="page">
@@ -50,6 +54,12 @@ export function SettingsPage() {
           ))}
         </div>
       </section>
+      <section className="card tools">
+        <h3>Tools</h3>
+        <button className="tool-row" onClick={() => setPlates(true)}><Icon name="plates" /> Plate calculator</button>
+        <a className="tool-row" href="/api/export" download><Icon name="download" /> Export backup (JSON)</a>
+      </section>
+      {plates && <PlateSheet onClose={() => setPlates(false)} />}
     </div>
   );
 }
