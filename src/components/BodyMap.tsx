@@ -1,13 +1,27 @@
 import { useRef, useState, type PointerEvent } from 'react';
 import { MUSCLE_BY_ID, type MuscleId } from '../../shared/muscles.ts';
-import { BACK, BACK_DETAILS, FRONT, FRONT_DETAILS, HEAD, SILHOUETTE, VIEWBOX } from './bodyPaths.ts';
+import { BACK, BACK_DETAILS, both, EAR, FRONT, FRONT_DETAILS, HEAD, SILHOUETTE, VIEWBOX } from './bodyPaths.ts';
 
 export type Side = 'front' | 'back';
 
 export type OverlayTone = 'fatigue' | 'volume' | 'neglect';
 
-const MIRROR = 'matrix(-1 0 0 1 200 0)';
 const MAX_TILT = 9;
+
+/** Both halves of every shape, computed once. */
+const FIGURES = {
+  front: {
+    muscles: Object.entries(FRONT).map(([m, ds]) => [m as MuscleId, ds!.flatMap(both)] as const),
+    details: ['M100,80 L100,216', ...FRONT_DETAILS.flatMap(both)],
+  },
+  back: {
+    muscles: Object.entries(BACK).map(([m, ds]) => [m as MuscleId, ds!.flatMap(both)] as const),
+    details: ['M100,60 L100,212', ...BACK_DETAILS.flatMap(both)],
+  },
+};
+const [BODY_L, BODY_R] = both(SILHOUETTE);
+const [HEAD_L, HEAD_R] = both(HEAD);
+const EARS = both(EAR);
 
 interface FigureProps {
   side: Side;
@@ -21,80 +35,128 @@ interface FigureProps {
 }
 
 function Figure({ side, overlay, tone, suggested, hover, onHover, onSelect }: FigureProps) {
-  const map = side === 'front' ? FRONT : BACK;
-  const details = side === 'front' ? FRONT_DETAILS : BACK_DETAILS;
+  const { muscles, details } = FIGURES[side];
   const id = (name: string) => `${side}-${name}`;
   const url = (name: string) => `url(#${id(name)})`;
 
   return (
     <svg viewBox={VIEWBOX} className="figure" aria-label={`${side} view`}>
       <defs>
-        {/* Halves are mirrored, so a left→right gradient reads as a rounded, centre-lit form. */}
-        <linearGradient id={id('skin')} x1="0" x2="1">
+        {/* Cylinder shading: each half is dark at its outer edge and lit toward the centre line. */}
+        <linearGradient id={id('skin-l')} x1="0" x2="1">
           <stop offset="0" style={{ stopColor: 'var(--skin-edge)' }} />
           <stop offset="1" style={{ stopColor: 'var(--skin-core)' }} />
         </linearGradient>
-        <radialGradient id={id('head')} cx="0.42" cy="0.35" r="0.7">
+        <linearGradient id={id('skin-r')} x1="1" x2="0">
+          <stop offset="0" style={{ stopColor: 'var(--skin-edge)' }} />
+          <stop offset="1" style={{ stopColor: 'var(--skin-core)' }} />
+        </linearGradient>
+        {/* One key light from the upper left, shared by every muscle. */}
+        <linearGradient id={id('muscle')} x1="0.1" y1="0" x2="0.9" y2="1">
+          <stop offset="0" style={{ stopColor: 'var(--muscle-hi)' }} />
+          <stop offset="0.5" style={{ stopColor: 'var(--muscle-mid)' }} />
+          <stop offset="1" style={{ stopColor: 'var(--muscle-lo)' }} />
+        </linearGradient>
+        <radialGradient id={id('sheen')} cx="0.32" cy="0.26" r="0.55">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.22" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id={id('key')} gradientUnits="userSpaceOnUse" cx="60" cy="70" r="260">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.08" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        </radialGradient>
+        {/* Ember heat: hot core, deep red edges. */}
+        <radialGradient id={id('heat')} cx="0.4" cy="0.35" r="0.8">
+          <stop offset="0" stopColor="#ffb46b" />
+          <stop offset="0.45" stopColor="#ff5634" />
+          <stop offset="1" stopColor="#c41d2a" />
+        </radialGradient>
+        <radialGradient id={id('head')} cx="0.4" cy="0.32" r="0.75">
           <stop offset="0" style={{ stopColor: 'var(--skin-core)' }} />
           <stop offset="1" style={{ stopColor: 'var(--skin-edge)' }} />
         </radialGradient>
-        <radialGradient id={id('muscle')} cx="0.62" cy="0.32" r="0.85">
-          <stop offset="0" style={{ stopColor: 'var(--muscle-hi)' }} />
-          <stop offset="0.55" style={{ stopColor: 'var(--muscle-mid)' }} />
-          <stop offset="1" style={{ stopColor: 'var(--muscle-lo)' }} />
-        </radialGradient>
+        {/* The halves meet at x = 100; keep the rim light off that seam. */}
+        <mask id={id('no-seam')} maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="410">
+          <rect width="200" height="410" fill="#fff" />
+          <rect x="98.8" width="2.4" height="410" fill="#000" />
+        </mask>
         <radialGradient id={id('ground')}>
-          <stop offset="0" stopColor="#000" stopOpacity="0.55" />
+          <stop offset="0" stopColor="#000" stopOpacity="0.6" />
           <stop offset="1" stopColor="#000" stopOpacity="0" />
         </radialGradient>
         <filter id={id('lift')} x="-20%" y="-10%" width="140%" height="120%">
-          <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000" floodOpacity="0.45" />
+          <feDropShadow dx="0" dy="5" stdDeviation="5" floodColor="#000" floodOpacity="0.5" />
+        </filter>
+        {/* Muscles sit slightly proud of the body. */}
+        <filter id={id('raise')} x="-10%" y="-10%" width="120%" height="120%">
+          <feDropShadow dx="0.6" dy="1.2" stdDeviation="0.8" floodColor="#000" floodOpacity="0.6" />
+        </filter>
+        <filter id={id('glow')} x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="2.4" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
         </filter>
       </defs>
 
-      <ellipse cx="100" cy="402" rx="52" ry="6" fill={url('ground')} />
+      <ellipse cx="100" cy="403" rx="58" ry="7" fill={url('ground')} />
+      <ellipse cx="100" cy="401" rx="44" ry="4.5" className="floor-ring" />
 
       <g filter={url('lift')}>
-        <path d={SILHOUETTE} fill={url('skin')} />
-        <path d={SILHOUETTE} fill={url('skin')} transform={MIRROR} />
-        <ellipse {...HEAD} fill={url('head')} />
+        <path d={BODY_L} fill={url('skin-l')} />
+        <path d={BODY_R} fill={url('skin-r')} />
+        <path d={`${HEAD_L} ${HEAD_R}`} fill={url('head')} />
+        {EARS.map((d, i) => <path key={i} d={d} fill="var(--skin-edge)" />)}
+      </g>
+      <g className="rim" mask={url('no-seam')}>
+        <path d={BODY_L} />
+        <path d={BODY_R} />
+        <path d={HEAD_L} />
+        <path d={HEAD_R} />
       </g>
 
-      {(Object.keys(map) as MuscleId[]).map((m) => {
-        const level = overlay.get(m) ?? 0;
-        const cls = ['muscle', hover === m && 'is-hover', suggested.includes(m) && 'is-suggested'].filter(Boolean).join(' ');
-        return (
-          <g
-            key={m}
-            className={cls}
-            role="button"
-            tabIndex={0}
-            aria-label={MUSCLE_BY_ID[m].name}
-            onPointerEnter={(e) => e.pointerType === 'mouse' && onHover(m)}
-            onPointerLeave={() => onHover(null)}
-            onClick={() => onSelect(m)}
-            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelect(m))}
-          >
-            {map[m]!.map((d, i) => (
-              <g key={i}>
-                <path d={d} className="muscle-shape" fill={url('muscle')} />
-                <path d={d} className="muscle-shape" fill={url('muscle')} transform={MIRROR} />
-                <path d={d} className={`overlay ${tone}`} style={{ opacity: level * 0.7 }} />
-                <path d={d} className={`overlay ${tone}`} style={{ opacity: level * 0.7 }} transform={MIRROR} />
-              </g>
-            ))}
-          </g>
-        );
-      })}
+      <g filter={url('raise')}>
+        {muscles.map(([m, paths]) => {
+          const cls = ['muscle', hover === m && 'is-hover', suggested.includes(m) && 'is-suggested'].filter(Boolean).join(' ');
+          return (
+            <g
+              key={m}
+              className={cls}
+              role="button"
+              tabIndex={0}
+              aria-label={MUSCLE_BY_ID[m].name}
+              onPointerEnter={(e) => e.pointerType === 'mouse' && onHover(m)}
+              onPointerLeave={() => onHover(null)}
+              onClick={() => onSelect(m)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelect(m))}
+            >
+              {paths.map((d, i) => (
+                <g key={i}>
+                  <path d={d} className="muscle-shape" fill={url('muscle')} />
+                  <path d={d} className="muscle-sheen" fill={url('sheen')} />
+                </g>
+              ))}
+            </g>
+          );
+        })}
+      </g>
+
+      <g className={`overlays ${tone}`} filter={tone === 'volume' ? undefined : url('glow')}>
+        {muscles.map(([m, paths]) => {
+          const level = overlay.get(m) ?? 0;
+          if (level < 0.02) return null;
+          return paths.map((d, i) => (
+            <path key={`${m}-${i}`} d={d} className="overlay" fill={tone === 'fatigue' ? url('heat') : undefined}
+              style={{ opacity: level * (tone === 'fatigue' ? 0.95 : 0.7) }} />
+          ));
+        })}
+      </g>
+
+      <path d={`${BODY_L} ${BODY_R}`} fill={url('key')} pointerEvents="none" />
 
       <g className="details">
-        <path d="M100,80 L100,216" />
-        {details.map((d, i) => (
-          <g key={i}>
-            <path d={d} />
-            <path d={d} transform={MIRROR} />
-          </g>
-        ))}
+        {details.map((d, i) => <path key={i} d={d} />)}
       </g>
     </svg>
   );
