@@ -1,23 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Brand } from './Brand.tsx';
 import { Icon, type IconName } from './Icon.tsx';
-import { PlateSheet } from './PlateSheet.tsx';
 
-export type Route = 'body' | 'tracker' | 'routines' | 'load' | 'records' | 'bodyweight' | 'review' | 'settings';
+export type Route = 'body' | 'tracker' | 'routines' | 'progress' | 'settings';
 
 export const ROUTES: { id: Route; label: string; icon: IconName }[] = [
-  { id: 'body', label: 'Body Map', icon: 'body' },
+  { id: 'body', label: 'Home', icon: 'body' },
   { id: 'tracker', label: 'Tracker', icon: 'calendar' },
   { id: 'routines', label: 'Routines', icon: 'list' },
-  { id: 'load', label: 'Training Load', icon: 'chart' },
-  { id: 'records', label: 'Personal Bests', icon: 'trophy' },
-  { id: 'bodyweight', label: 'Bodyweight', icon: 'scale' },
-  { id: 'review', label: 'Year in Review', icon: 'sparkle' },
+  { id: 'progress', label: 'Progress', icon: 'chart' },
   { id: 'settings', label: 'Settings', icon: 'settings' },
 ];
 
+const MAIN = ROUTES.filter((r) => r.id !== 'settings');
+const href = (r: Route) => `#/${r === 'body' ? '' : r}`;
+
 export function Drawer({ open, route, onClose }: { open: boolean; route: Route; onClose: () => void }) {
-  const [plates, setPlates] = useState(false);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -31,25 +29,20 @@ export function Drawer({ open, route, onClose }: { open: boolean; route: Route; 
       <nav className={`drawer ${open ? 'open' : ''}`} aria-hidden={!open} inert={!open}>
         <div className="drawer-head">
           <Brand />
-          <button className="icon-btn" onClick={onClose} aria-label="Close menu"><Icon name="close" /></button>
         </div>
         <ul>
-          {ROUTES.map((r) => (
+          {MAIN.map((r) => (
             <li key={r.id}>
-              <a href={`#/${r.id === 'body' ? '' : r.id}`} className={route === r.id ? 'active' : ''} onClick={onClose}>
+              <a href={href(r.id)} className={route === r.id ? 'active' : ''} onClick={onClose}>
                 <Icon name={r.icon} /> {r.label}
               </a>
             </li>
           ))}
         </ul>
-        <button className="drawer-tool" onClick={() => setPlates(true)}>
-          <Icon name="plates" /> Plate calculator
-        </button>
-        <a className="drawer-foot" href="/api/export" download>
-          <Icon name="download" size={18} /> Export backup
+        <a className={`drawer-foot ${route === 'settings' ? 'active' : ''}`} href={href('settings')} onClick={onClose}>
+          <Icon name="settings" size={18} /> Settings
         </a>
       </nav>
-      {plates && <PlateSheet onClose={() => setPlates(false)} />}
     </>
   );
 }
