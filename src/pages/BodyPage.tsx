@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
 import { MUSCLES, type MuscleId } from '../../shared/muscles.ts';
-import { BodyMap, type OverlayTone } from '../components/BodyMap.tsx';
+import { BodyMap, type OverlayTone, type Side } from '../components/BodyMap.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { useData, useUi } from '../data.tsx';
 import { daysSinceTrained, weeklySets } from '../lib/stats.ts';
-import { useSession } from '../session.tsx';
 
 type Mode = 'recovery' | 'volume' | 'neglected';
 
@@ -35,11 +34,17 @@ function useMode() {
   return [MODES.some((m) => m.id === mode) ? mode : 'recovery', choose] as const;
 }
 
+/** "Chest, Quads and 2 more" */
+const names = (ids: MuscleId[]) => {
+  const n = ids.map((id) => MUSCLES.find((m) => m.id === id)!.name);
+  return n.length <= 2 ? n.join(' and ') : `${n.slice(0, 2).join(', ')} and ${n.length - 2} more`;
+};
+
 export function BodyPage() {
   const { fatigue, rec, activeSession, entries, exById, now, load } = useData();
-  const { openMuscle, openPlan, openFootball, openSoreness } = useUi();
-  const { startWorkout } = useSession();
+  const { openMuscle, openPlan, openQuick } = useUi();
   const [mode, setMode] = useMode();
+  const [side, setSide] = useState<Side>('front');
 
   const volume = useMemo(() => weeklySets(entries, exById, now), [entries, exById, now]);
   const since = useMemo(() => daysSinceTrained(entries, exById, now), [entries, exById, now]);
@@ -54,125 +59,52 @@ export function BodyPage() {
     return out;
   }, [mode, fatigue, volume, since]);
 
-  const recovering = MUSCLES.filter((m) => (fatigue.get(m.id)?.hoursLeft ?? 0) > 0).sort(
-    (a, b) => fatigue.get(b.id)!.hoursLeft - fatigue.get(a.id)!.hoursLeft,
-  );
-  const under = MUSCLES.filter((m) => (volume.get(m.id) ?? 0) < WEEKLY_TARGET.min).sort(
-    (a, b) => (volume.get(a.id) ?? 0) - (volume.get(b.id) ?? 0),
-  );
-  const neglected = MUSCLES.filter((m) => (since.get(m.id) ?? Infinity) >= NEGLECTED_DAYS).sort(
-    (a, b) => (since.get(b.id) ?? Infinity) - (since.get(a.id) ?? Infinity),
-  );
-  const tone = MODES.find((m) => m.id === mode)!.tone;
-  const sets = (n: number) => (Number.isInteger(n) ? n : n.toFixed(1));
+  const recovering = MUSCLES.filter((m) => (fatigue.get(m.id)?.hoursLeft ?? 0) > 0)
+    .sort((a, b) => fatigue.get(b.id)!.hoursLeft - fatigue.get(a.id)!.hoursLeft)
+    .map((m) => m.id);
+  const under = MUSCLES.filter((m) => (volume.get(m.id) ?? 0) < WEEKLY_TARGET.min).map((m) => m.id);
+  const neglected = MUSCLES.filter((m) => (since.get(m.id) ?? Infinity) >= NEGLECTED_DAYS).map((m) => m.id);
+  const spike = load.zone === 'spike';
+
+  const caption =
+    entries.length === 0
+      ? 'Tap a muscle to log your first workout'
+      : mode === 'recovery'
+        ? recovering.length ? `${names(recovering)} recovering` : 'Everything is recovered'
+        : mode === 'volume'
+          ? under.length ? `${under.length} of ${MUSCLES.length} muscles under ${WEEKLY_TARGET.min} sets this week` : 'Every muscle hit its weekly target'
+          : neglected.length ? `${names(neglected)} — no work in ${NEGLECTED_DAYS}+ days` : 'Nothing neglected';
 
   return (
-    <div className="page body-page">
-      <button className="today-card" onClick={openPlan}>
-        <span className="today-icon"><Icon name="sparkle" /></span>
-        <span>
-          <span className="eyebrow">
-            {rec.weekday}
-            {rec.football && <span className="md-tag">{rec.football.label}</span>}
-          </span>
-          <strong>{rec.headline}</strong>
-        </span>
-        <Icon name="chevron" />
+    <div className="page home">
+      <button className={`today-line ${spike ? 'warn' : ''}`} onClick={spike ? () => (location.hash = '#/progress/load') : openPlan}>
+        <span className="today-day">{rec.weekday.slice(0, 3)}</span>
+        {rec.football && !rec.headline.startsWith(rec.football.label) && <span className="md-tag">{rec.football.label}</span>}
+        <span className="today-text">{spike ? `Load spike — ${load.ratio!.toFixed(1)}× your usual week` : rec.headline}</span>
+        <Icon name="chevron" size={16} />
       </button>
 
-      {(load.zone === 'spike' || load.zone === 'caution') && (
-        <a className={`load-warning ${load.zone}`} href="#/load">
-          <span aria-hidden="true">{load.zone === 'spike' ? '⚠' : '!'}</span>
-          <span>
-            <strong>{load.zone === 'spike' ? 'Load spike' : 'Load climbing'}</strong> — this week is {load.ratio!.toFixed(1)}× your 4-week average.
-            {load.zone === 'spike' ? ' Ease off to cut injury risk.' : ' Hold steady.'}
-          </span>
-        </a>
-      )}
+      <BodyMap overlay={overlay} tone={MODES.find((m) => m.id === mode)!.tone} suggested={mode === 'recovery' ? rec.muscles : []}
+        onSelect={(m) => openMuscle(m)} side={side} onSideChange={setSide} />
 
-      <div className="quick-actions">
-        {!activeSession && (
-          <button className="quick coral" onClick={() => startWorkout()}>
-            <Icon name="timer" size={18} /> Workout
-          </button>
-        )}
-        <button className="quick pitch" onClick={openFootball}>
-          <Icon name="ball" size={18} /> Football
-        </button>
-        <button className="quick" onClick={openSoreness}>
-          <Icon name="pulse" size={18} /> Sore?
+      <div className="home-controls">
+        <div className="text-tabs" role="tablist" aria-label="Body map view">
+          {MODES.map((m) => (
+            <button key={m.id} role="tab" aria-selected={mode === m.id} className={mode === m.id ? 'active' : ''} onClick={() => setMode(m.id)}>
+              {m.label}
+            </button>
+          ))}
+        </div>
+        <button className="icon-btn" onClick={() => setSide(side === 'front' ? 'back' : 'front')} aria-label={`Show ${side === 'front' ? 'back' : 'front'}`}>
+          <Icon name="flip" size={18} />
         </button>
       </div>
+      <p className="home-caption">{caption}</p>
 
-      <div className="segmented small mode-switch" role="tablist" aria-label="Body map view">
-        {MODES.map((m) => (
-          <button key={m.id} role="tab" aria-selected={mode === m.id} className={mode === m.id ? 'active' : ''} onClick={() => setMode(m.id)}>
-            {m.label}
-          </button>
-        ))}
-      </div>
-
-      <BodyMap overlay={overlay} tone={tone} suggested={mode === 'recovery' ? rec.muscles : []} onSelect={(m) => openMuscle(m)} />
-
-      {mode === 'recovery' && (
-        <>
-          <div className="legend">
-            <span>Just trained</span>
-            <span className="legend-bar" />
-            <span>Recovered</span>
-          </div>
-          {recovering.length > 0 && (
-            <div className="chips center">
-              {recovering.map((m) => (
-                <button key={m.id} className="chip recovering" onClick={() => openMuscle(m.id)}>
-                  {m.name} · {Math.ceil(fatigue.get(m.id)!.hoursLeft)}h{fatigue.get(m.id)!.sore ? ' · sore' : ''}
-                </button>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {mode === 'volume' && (
-        <>
-          <div className="legend">
-            <span>0 sets</span>
-            <span className="legend-bar volume" />
-            <span>{WEEKLY_TARGET.max}+ / week</span>
-          </div>
-          <p className="muted small center-text">
-            Target {WEEKLY_TARGET.min}–{WEEKLY_TARGET.max} sets per muscle per week (assisting work counts half).
-          </p>
-          {under.length > 0 && (
-            <div className="chips center">
-              {under.map((m) => (
-                <button key={m.id} className="chip under" onClick={() => openMuscle(m.id)}>
-                  {m.name} · {sets(volume.get(m.id) ?? 0)}/{WEEKLY_TARGET.min}
-                </button>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {mode === 'neglected' && (
-        <>
-          <div className="legend">
-            <span className="legend-swatch" />
-            <span>No direct work in {NEGLECTED_DAYS}+ days</span>
-          </div>
-          {neglected.length > 0 ? (
-            <div className="chips center">
-              {neglected.map((m) => (
-                <button key={m.id} className="chip neglect" onClick={() => openMuscle(m.id)}>
-                  {m.name} · {since.has(m.id) ? `${since.get(m.id)}d` : 'never'}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="muted small center-text">Nothing neglected — every muscle got work in the last {NEGLECTED_DAYS} days. 👏</p>
-          )}
-        </>
+      {!activeSession && (
+        <button className="fab" onClick={openQuick} aria-label="Log a workout, football or soreness">
+          <Icon name="plus" size={26} />
+        </button>
       )}
     </div>
   );

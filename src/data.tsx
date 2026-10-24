@@ -128,6 +128,7 @@ export interface ToastAction {
 export type SheetState =
   | { type: 'muscle'; muscle: MuscleId; exerciseId?: number }
   | { type: 'plan' }
+  | { type: 'quick' }
   | { type: 'football' }
   | { type: 'summary'; sessionId: string }
   | { type: 'soreness' }
@@ -143,6 +144,7 @@ interface UiActions {
   openSoreness(): void;
   openHistory(exerciseId: number): void;
   openRoutine(routineId?: string): void;
+  openQuick(): void;
   notify(message: string, tone?: 'default' | 'pb' | 'error', action?: ToastAction): void;
 }
 

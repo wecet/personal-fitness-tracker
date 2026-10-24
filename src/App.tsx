@@ -15,10 +15,8 @@ import { DataProvider, UiCtx, type SheetState, type ToastAction } from './data.t
 import { dateKey } from './lib/stats.ts';
 import { store, type SyncStatus } from './lib/store.ts';
 import { BodyPage } from './pages/BodyPage.tsx';
-import { BodyweightPage } from './pages/BodyweightPage.tsx';
-import { LoadPage } from './pages/LoadPage.tsx';
-import { RecordsPage } from './pages/RecordsPage.tsx';
-import { ReviewPage } from './pages/ReviewPage.tsx';
+import { PROGRESS_TABS, ProgressPage, type ProgressTab } from './pages/ProgressPage.tsx';
+import { QuickSheet } from './components/QuickSheet.tsx';
 import { RoutinesPage } from './pages/RoutinesPage.tsx';
 import { SettingsPage } from './pages/SettingsPage.tsx';
 import { TrackerPage } from './pages/TrackerPage.tsx';
@@ -26,9 +24,14 @@ import type { AppState } from '../shared/types.ts';
 
 const PLAN_SEEN_KEY = 'plan-seen-on';
 
-function parseRoute(): Route {
-  const r = location.hash.replace(/^#\/?/, '');
-  return ROUTES.some((x) => x.id === r) ? (r as Route) : 'body';
+/** Pages that moved into Progress tabs keep working as links. */
+const LEGACY: Record<string, ProgressTab> = { records: 'records', load: 'load', bodyweight: 'weight', review: 'year' };
+
+function parseRoute(): { route: Route; tab: ProgressTab } {
+  const [first = '', second = ''] = location.hash.replace(/^#\/?/, '').split('/');
+  if (first in LEGACY) return { route: 'progress', tab: LEGACY[first] };
+  const tab = PROGRESS_TABS.some((t) => t.id === second) ? (second as ProgressTab) : 'records';
+  return { route: ROUTES.some((x) => x.id === first) ? (first as Route) : 'body', tab };
 }
 
 function useRoute() {
@@ -69,7 +72,7 @@ function SyncBadge({ status, pending }: { status: SyncStatus; pending: number })
 type Toast = { id: number; message: string; tone: 'default' | 'pb' | 'error'; action?: ToastAction };
 
 export function App() {
-  const route = useRoute();
+  const { route, tab } = useRoute();
   const { state, status, pending } = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sheet, setSheet] = useState<SheetState>(null);
@@ -98,6 +101,7 @@ export function App() {
       openSoreness: () => setSheet({ type: 'soreness' }),
       openHistory: (exerciseId: number) => setSheet({ type: 'history', exerciseId }),
       openRoutine: (routineId?: string) => setSheet({ type: 'routine', routineId }),
+      openQuick: () => setSheet({ type: 'quick' }),
       notify: (message: string, tone: Toast['tone'] = 'default', action?: ToastAction) => setToast({ id: Date.now(), message, tone, action }),
     }),
     [],
@@ -116,7 +120,6 @@ export function App() {
         <h1>{route === 'body' ? <Brand /> : title}</h1>
         <div className="topbar-end">
           <SyncBadge status={status} pending={pending} />
-          <button className="icon-btn" onClick={ui.openPlan} aria-label="Today’s plan" disabled={!state}><Icon name="sparkle" /></button>
         </div>
       </header>
       <Drawer open={drawerOpen} route={route} onClose={closeDrawer} />
@@ -137,15 +140,13 @@ export function App() {
             {route === 'body' && <BodyPage />}
             {route === 'tracker' && <TrackerPage />}
             {route === 'routines' && <RoutinesPage />}
-            {route === 'load' && <LoadPage />}
-            {route === 'records' && <RecordsPage />}
-            {route === 'bodyweight' && <BodyweightPage />}
-            {route === 'review' && <ReviewPage />}
+            {route === 'progress' && <ProgressPage tab={tab} />}
             {route === 'settings' && <SettingsPage />}
             {sheet?.type === 'muscle' && (
               <MuscleSheet key={`${sheet.muscle}-${sheet.exerciseId}`} muscle={sheet.muscle} exerciseId={sheet.exerciseId} onClose={closeSheet} />
             )}
             {sheet?.type === 'plan' && <PlanSheet onClose={closeSheet} />}
+            {sheet?.type === 'quick' && <QuickSheet onClose={closeSheet} />}
             {sheet?.type === 'football' && <FootballSheet onClose={closeSheet} />}
             {sheet?.type === 'routine' && <RoutineEditor key={sheet.routineId ?? 'new'} routineId={sheet.routineId} onClose={closeSheet} />}
             {sheet?.type === 'history' && <HistorySheet key={sheet.exerciseId} exerciseId={sheet.exerciseId} onClose={closeSheet} />}
