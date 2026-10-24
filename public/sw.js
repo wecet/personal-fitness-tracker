@@ -1,7 +1,7 @@
 // Caches the app shell so Ember opens without a connection. Data itself is
 // cached and queued by the app (see src/lib/store.ts), never by this worker.
-const CACHE = 'ember-shell-v1';
-const SHELL = ['/', '/manifest.webmanifest', '/icon.svg', '/apple-touch-icon.png'];
+const CACHE = 'ember-shell-v2';
+const SHELL = ['/', '/manifest.webmanifest', '/icon.svg?v=2', '/apple-touch-icon.png?v=2'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
