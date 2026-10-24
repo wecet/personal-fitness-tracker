@@ -2,6 +2,7 @@ import { MUSCLES, MUSCLE_BY_ID, type MuscleCategory, type MuscleId } from '../..
 import type { Activity, Entry, Exercise, ExerciseMetric, Settings, Soreness, SorenessLevel, WorkoutSet } from '../../shared/types.ts';
 import { dateKey } from './dates.ts';
 import { activityIntensity, FOOTBALL_MUSCLES, footballContext } from './football.ts';
+import { HARD_SET } from './strain.ts';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -100,80 +101,109 @@ export function personalBests(entries: Entry[], exById: Map<number, Exercise>) {
 // ---------- recovery ----------
 
 export interface MuscleFatigue {
-  /** 0 (fresh) .. 1 (just trained). Drives the red overlay. */
+  /** 0 (fresh) .. 1 (wrecked). Drives the red overlay. */
   level: number;
-  /** Hours until the recommended rest period is over (primary work only). */
+  /** Hours until the level drops below the "ready" threshold. */
   hoursLeft: number;
-  /** Set when a soreness check-in is what keeps this muscle recovering. */
+  /** Set when a soreness check-in is part of what keeps this muscle recovering. */
   sore?: SorenessLevel;
 }
 
-/** How long reported soreness keeps a muscle out of heavy work, and how strongly it shows. */
-const SORENESS_EFFECT: Record<SorenessLevel, { hours: number; intensity: number }> = {
-  1: { hours: 24, intensity: 0.5 },
-  2: { hours: 48, intensity: 0.85 },
+/**
+ * Fatigue model. Each workout leaves a load on a muscle, measured in hard-set
+ * equivalents (sum of set strains; assisting muscles take half). Loads add up
+ * with diminishing returns: level = 1 − e^(−load/3), so one hard set ≈ 28%,
+ * three ≈ 63%, six ≈ 86%. Each load drains linearly over a recovery window that
+ * scales with how big it was, from ~30% of the muscle's full rest period for a
+ * light session to 100% for a brutal one.
+ */
+const LOAD_SCALE = 3;
+const READY_BELOW = 0.3;
+const SECONDARY_SHARE = 0.5;
+const levelOf = (load: number) => 1 - Math.exp(-load / LOAD_SCALE);
+
+/** Hard-set equivalents a full-effort 90-minute match leaves on each leg muscle. */
+const MATCH_LOAD = 5;
+const SORENESS_EFFECT: Record<SorenessLevel, { load: number; hours: number }> = {
+  1: { load: 2, hours: 24 },
+  2: { load: 5, hours: 48 },
 };
 
-const SECONDARY_INTENSITY = 0.5;
+interface Hit {
+  at: number;
+  load: number;
+  /** Hours for this load to fully drain. */
+  window: number;
+  sore?: SorenessLevel;
+}
+
+const remainingLoad = (hits: Hit[], t: number) =>
+  hits.reduce((sum, h) => {
+    const elapsed = (t - h.at) / HOUR;
+    return elapsed < 0 || elapsed >= h.window ? sum : sum + h.load * (1 - elapsed / h.window);
+  }, 0);
 
 export function muscleFatigue(
   entries: Entry[],
   exById: Map<number, Exercise>,
   now: number,
+  strains: Map<string, number[]>,
   activities: Activity[] = [],
   soreness: Soreness[] = [],
 ) {
-  const out = new Map<MuscleId, MuscleFatigue>();
-  /** `scale` shortens the rest period for lighter work; `needsRest` marks work that should block heavy training. */
-  const hit = (muscle: MuscleId, at: number, intensity: number, needsRest: boolean, scale = 1) => {
-    const recovery = MUSCLE_BY_ID[muscle].recoveryHours * HOUR * scale;
-    const remaining = 1 - (now - at) / recovery;
-    if (remaining <= 0 || at > now + HOUR) return;
-    const prev = out.get(muscle) ?? { level: 0, hoursLeft: 0 };
-    out.set(muscle, {
-      level: Math.max(prev.level, Math.min(1, remaining * intensity)),
-      hoursLeft: needsRest ? Math.max(prev.hoursLeft, (remaining * recovery) / HOUR) : prev.hoursLeft,
-    });
+  const hits = new Map<MuscleId, Hit[]>();
+  const add = (m: MuscleId, at: number, load: number, window?: number, sore?: SorenessLevel) => {
+    if (load <= 0 || at > now + HOUR) return;
+    const full = MUSCLE_BY_ID[m].recoveryHours;
+    const hit = { at, load, window: window ?? full * (0.3 + 0.7 * levelOf(load)), sore };
+    if ((now - at) / HOUR < hit.window) hits.set(m, [...(hits.get(m) ?? []), hit]);
   };
+
   for (const e of entries) {
     const ex = exById.get(e.exerciseId);
-    if (!ex) continue;
     const at = Date.parse(e.performedAt);
-    if (now - at > 4 * DAY) continue;
-    hit(ex.muscle, at, 1, true);
-    for (const m of ex.secondary) hit(m, at, SECONDARY_INTENSITY, false);
+    if (!ex || now - at > 4 * DAY) continue;
+    const load = (strains.get(e.id) ?? []).reduce((a, b) => a + b, 0);
+    add(ex.muscle, at, load);
+    for (const m of ex.secondary) add(m, at, load * SECONDARY_SHARE);
   }
   for (const a of activities) {
     const at = Date.parse(a.performedAt);
     if (now - at > 4 * DAY) continue;
     const intensity = activityIntensity(a);
-    for (const [m, share] of FOOTBALL_MUSCLES) hit(m, at, intensity * share, intensity * share >= 0.6, intensity);
+    for (const [m, share] of FOOTBALL_MUSCLES) add(m, at, MATCH_LOAD * intensity * share);
   }
   // Only the most recent check-in counts: reporting a muscle as fine again clears it.
   const latest = soreness.reduce<Soreness | null>((a, b) => (!a || b.recordedAt > a.recordedAt ? b : a), null);
   if (latest) {
-    const at = Date.parse(latest.recordedAt);
     for (const [m, level] of Object.entries(latest.muscles) as [MuscleId, SorenessLevel][]) {
-      const { hours, intensity } = SORENESS_EFFECT[level];
-      const before = out.get(m)?.hoursLeft ?? 0;
-      hit(m, at, intensity, true, hours / MUSCLE_BY_ID[m].recoveryHours);
-      const after = out.get(m);
-      if (after && after.hoursLeft > before) after.sore = level;
+      const { load, hours } = SORENESS_EFFECT[level];
+      add(m, Date.parse(latest.recordedAt), load, hours, level);
     }
+  }
+
+  const out = new Map<MuscleId, MuscleFatigue>();
+  for (const [m, list] of hits) {
+    const level = levelOf(remainingLoad(list, now));
+    let hoursLeft = 0;
+    while (hoursLeft < 120 && levelOf(remainingLoad(list, now + hoursLeft * HOUR)) >= READY_BELOW) hoursLeft++;
+    const sore = list.find((h) => h.sore && (now - h.at) / HOUR < h.window)?.sore;
+    out.set(m, { level, hoursLeft, sore: hoursLeft > 0 ? sore : undefined });
   }
   return out;
 }
 
-/** Sets per muscle in the last 7 days; secondary muscles count half. */
-export function weeklySets(entries: Entry[], exById: Map<number, Exercise>, now: number): Map<MuscleId, number> {
+/** Hard sets per muscle in the last 7 days (warm-ups excluded); assisting muscles count half. */
+export function weeklySets(entries: Entry[], exById: Map<number, Exercise>, now: number, strains: Map<string, number[]>): Map<MuscleId, number> {
   const out = new Map<MuscleId, number>();
   const add = (m: MuscleId, n: number) => out.set(m, (out.get(m) ?? 0) + n);
   for (const e of entries) {
     const ex = exById.get(e.exerciseId);
     const age = now - Date.parse(e.performedAt);
     if (!ex || age < 0 || age > 7 * DAY) continue;
-    add(ex.muscle, e.sets.length);
-    for (const m of ex.secondary) add(m, e.sets.length * SECONDARY_INTENSITY);
+    const hard = (strains.get(e.id) ?? []).filter((s) => s >= HARD_SET).length;
+    add(ex.muscle, hard);
+    for (const m of ex.secondary) add(m, hard * SECONDARY_SHARE);
   }
   return out;
 }
@@ -185,12 +215,12 @@ export function daysSinceTrained(entries: Entry[], exById: Map<number, Exercise>
   return out;
 }
 
-export const isRecovered = (f: MuscleFatigue | undefined) => !f || (f.hoursLeft === 0 && f.level < 0.3);
+export const isRecovered = (f: MuscleFatigue | undefined) => !f || f.hoursLeft === 0;
 
 export function recoveryLabel(f: MuscleFatigue | undefined): string {
   if (!f || f.level === 0) return 'Ready to train';
   if (f.sore) return `${f.sore === 2 ? 'Very sore' : 'A bit sore'} · rest ~${Math.ceil(f.hoursLeft)}h`;
-  if (f.hoursLeft > 0) return `Recovering · ready in ${f.hoursLeft < 1 ? '<1' : Math.round(f.hoursLeft)}h`;
+  if (f.hoursLeft > 0) return `Recovering · ready in ~${f.hoursLeft}h`;
   return 'Lightly worked · good to go';
 }
 

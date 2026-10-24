@@ -41,12 +41,12 @@ const names = (ids: MuscleId[]) => {
 };
 
 export function BodyPage() {
-  const { fatigue, rec, activeSession, entries, exById, now, load } = useData();
+  const { fatigue, rec, activeSession, entries, exById, now, load, strains } = useData();
   const { openMuscle, openPlan, openQuick } = useUi();
   const [mode, setMode] = useMode();
   const [side, setSide] = useState<Side>('front');
 
-  const volume = useMemo(() => weeklySets(entries, exById, now), [entries, exById, now]);
+  const volume = useMemo(() => weeklySets(entries, exById, now, strains), [entries, exById, now, strains]);
   const since = useMemo(() => daysSinceTrained(entries, exById, now), [entries, exById, now]);
 
   const overlay = useMemo(() => {
@@ -72,7 +72,7 @@ export function BodyPage() {
       : mode === 'recovery'
         ? recovering.length ? `${names(recovering)} recovering` : 'Everything is recovered'
         : mode === 'volume'
-          ? under.length ? `${under.length} of ${MUSCLES.length} muscles under ${WEEKLY_TARGET.min} sets this week` : 'Every muscle hit its weekly target'
+          ? under.length ? `${under.length} of ${MUSCLES.length} muscles under ${WEEKLY_TARGET.min} hard sets this week` : 'Every muscle hit its weekly target'
           : neglected.length ? `${names(neglected)} — no work in ${NEGLECTED_DAYS}+ days` : 'Nothing neglected';
 
   return (
