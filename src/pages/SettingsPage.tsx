@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Icon } from '../components/Icon.tsx';
 import { PlateSheet } from '../components/PlateSheet.tsx';
 import { useData } from '../data.tsx';
+import { ScienceSection } from './ScienceSection.tsx';
 import { formatDuration, WEEKDAYS } from '../lib/stats.ts';
 import type { Settings } from '../../shared/types.ts';
 
@@ -59,6 +60,7 @@ export function SettingsPage() {
         <button className="tool-row" onClick={() => setPlates(true)}><Icon name="plates" /> Plate calculator</button>
         <a className="tool-row" href="/api/export" download><Icon name="download" /> Export backup (JSON)</a>
       </section>
+      <ScienceSection />
       {plates && <PlateSheet onClose={() => setPlates(false)} />}
     </div>
   );

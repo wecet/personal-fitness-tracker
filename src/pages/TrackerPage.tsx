@@ -133,7 +133,7 @@ function MonthCalendar({ byDay, selected, onSelect }: {
 function DayDetail({ dayKey, log }: { dayKey: string; log: DayLog | undefined }) {
   const entries = log?.entries ?? [];
   const activities = log?.activities ?? [];
-  const { exById, prEntryIds, remove, sessions } = useData();
+  const { exById, prEntryIds, remove, sessions, efforts } = useData();
   const { openMuscle, openSummary } = useUi();
   const daySessions = sessions.filter((s) => s.endedAt && dateKey(s.startedAt) === dayKey);
   const date = parseDateKey(dayKey);
@@ -196,7 +196,14 @@ function DayDetail({ dayKey, log }: { dayKey: string; log: DayLog | undefined })
                     {prEntryIds.has(e.id) && <span className="pb-badge small">PB</span>}
                     <div className="set-list">
                       {e.sets.map((s, i) => (
-                        <span key={i}>{formatSet(s, ex?.metric ?? 'weight')}</span>
+                        <span key={i}>
+                          {formatSet(s, ex?.metric ?? 'weight')}
+                          {efforts.get(e.id)?.[i] && (
+                            <span className="rir" title="Estimated reps in reserve">
+                              {' '}· {efforts.get(e.id)![i].rir < 0.5 ? 'to failure' : `~${Math.round(efforts.get(e.id)![i].rir)} RIR`}
+                            </span>
+                          )}
+                        </span>
                       ))}
                     </div>
                   </div>

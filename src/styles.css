@@ -501,6 +501,7 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .load-split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
 .load-split div { display: flex; flex-direction: column; padding: 10px; border-radius: 10px; background: var(--surface-2); }
 .load-split span { font-size: 12px; color: var(--muted); }
+.load-split .flag strong { color: var(--warning); }
 .explainer { margin: 0 4px; }
 
 /* ---------- routines ---------- */
@@ -598,3 +599,10 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 
 .tools { display: flex; flex-direction: column; }
 .tool-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; font-weight: 500; text-align: left; border-top: 1px solid var(--border); }
+
+.rir { color: var(--muted); opacity: 0.75; font-size: 12px; }
+
+.science details { border-top: 1px solid var(--border); }
+.science summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
+.science details p { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
+.sources { margin: 0 0 12px; padding-left: 16px; list-style: disc; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
