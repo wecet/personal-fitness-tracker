@@ -1,10 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { FOOTBALL_TYPES, type FootballType } from '../../shared/types.ts';
 import { useData, useUi } from '../data.tsx';
-import { activityIntensity, DEFAULT_MINUTES, EFFORT_LABEL, FOOTBALL_LABEL } from '../lib/football.ts';
-import { dateKey, parseDateKey } from '../lib/stats.ts';
+import { DEFAULT_MINUTES, EFFORT_LABEL, FOOTBALL_LABEL } from '../lib/football.ts';
+import { dateKey, footballLoad, hoursToRecover, parseDateKey } from '../lib/stats.ts';
 import { newId } from '../lib/store.ts';
-import { MUSCLE_BY_ID } from '../../shared/muscles.ts';
 import { Sheet } from './Sheet.tsx';
 
 export function FootballSheet({ onClose }: { onClose: () => void }) {
@@ -29,7 +28,7 @@ export function FootballSheet({ onClose }: { onClose: () => void }) {
     const at = date === today ? new Date() : new Date(parseDateKey(date).setHours(18));
     const activity = { id: newId(), type, performedAt: at.toISOString(), minutes, rpe, note: null };
     put('activity', activity);
-    const legsHours = Math.round(MUSCLE_BY_ID.quads.recoveryHours * activityIntensity(activity));
+    const legsHours = hoursToRecover('hamstrings', footballLoad(activity, 1));
     notify(`${FOOTBALL_LABEL[type]} logged · legs need ~${legsHours}h`);
     onClose();
   }

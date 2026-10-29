@@ -13,22 +13,24 @@ export const DEFAULT_MINUTES: Record<FootballType, number> = { match: 90, traini
 
 export const EFFORT_LABEL = ['', 'Very easy', 'Easy', 'Light', 'Moderate', 'Steady', 'Hard', 'Very hard', 'Tough', 'Brutal', 'Left everything out there'];
 
-/** Share of a session's load each muscle takes. Football is leg-dominant with some trunk work. */
+/**
+ * Share of a session's load each muscle takes. Sprinting and changes of
+ * direction load the hamstrings and adductors (hips) most, then calves and
+ * quads (decelerations); trunk work is light.
+ */
 export const FOOTBALL_MUSCLES: [MuscleId, number][] = [
-  ['quads', 1],
   ['hamstrings', 1],
-  ['calves', 1],
   ['hips', 1],
-  ['glutes', 0.8],
-  ['obliques', 0.4],
+  ['calves', 0.9],
+  ['quads', 0.9],
+  ['glutes', 0.7],
+  ['obliques', 0.3],
   ['abs', 0.3],
 ];
 
 /** Session-RPE training load in arbitrary units: minutes × effort. */
 export const activityLoad = (a: Pick<Activity, 'minutes' | 'rpe'>) => a.minutes * a.rpe;
 
-/** 0–1 scale where a hard 90-minute match (~540+ AU) is a full hit. */
-export const activityIntensity = (a: Activity) => Math.min(1, Math.max(0.2, activityLoad(a) / 540));
 
 export interface FootballContext {
   /** Short label for the day relative to the match, e.g. "Match day", "MD-1". */
