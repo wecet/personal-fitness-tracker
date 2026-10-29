@@ -62,9 +62,10 @@ function SyncBadge({ status, pending }: { status: SyncStatus; pending: number })
     status === 'error' ? 'Sync failed — retrying' :
     `Syncing ${pending}…`;
   return (
-    <button className={`sync-badge ${status}`} onClick={() => store.flush()} title="Sync now">
+    <button className={`sync-badge ${status}`} onClick={() => store.flush()} title={`${label} — tap to sync now`} aria-label={label}>
       <span className="dot" />
-      {label}
+      {pending > 0 && <span className="sync-count">{pending}</span>}
+      <span className="sync-label">{label}</span>
     </button>
   );
 }
@@ -112,6 +113,7 @@ export function App() {
   const closeSheet = useCallback(() => setSheet(null), []);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
   const title = ROUTES.find((r) => r.id === route)!.label;
+  const inWorkout = !!state?.records.session.some((s) => !s.endedAt);
 
   return (
     <UiCtx.Provider value={ui}>
@@ -120,11 +122,16 @@ export function App() {
         <h1>{route === 'body' ? <Brand /> : title}</h1>
         <div className="topbar-end">
           <SyncBadge status={status} pending={pending} />
+          {state && !inWorkout && (
+            <button className="add-btn" onClick={ui.openQuick} aria-label="Log a workout, football or soreness">
+              <Icon name="plus" size={20} />
+            </button>
+          )}
         </div>
       </header>
       <Drawer open={drawerOpen} route={route} onClose={closeDrawer} />
 
-      <main className={state?.records.session.some((s) => !s.endedAt) ? 'with-session' : ''}>
+      <main className={inWorkout ? 'with-session' : ''}>
         {!state ? (
           status === 'syncing' ? (
             <div className="page empty"><div className="spinner" /></div>
