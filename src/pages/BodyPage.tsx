@@ -41,8 +41,8 @@ const names = (ids: MuscleId[]) => {
 };
 
 export function BodyPage() {
-  const { fatigue, rec, activeSession, entries, exById, now, load, strains } = useData();
-  const { openMuscle, openPlan, openQuick } = useUi();
+  const { fatigue, rec, entries, exById, now, load, strains } = useData();
+  const { openMuscle, openPlan } = useUi();
   const [mode, setMode] = useMode();
   const [side, setSide] = useState<Side>('front');
 
@@ -101,11 +101,6 @@ export function BodyPage() {
       </div>
       <p className="home-caption">{caption}</p>
 
-      {!activeSession && (
-        <button className="fab" onClick={openQuick} aria-label="Log a workout, football or soreness">
-          <Icon name="plus" size={26} />
-        </button>
-      )}
     </div>
   );
 }
