@@ -48,7 +48,7 @@ export function PlanSheet({ onClose }: { onClose: () => void }) {
                       <span className="muted small">
                         {MUSCLE_BY_ID[ex.muscle].name}
                         {last && ` · last ${formatSets(last.sets, ex.metric)}`}
-                        {last && <span className="next"> → {suggestNext(last.sets, ex.metric)?.short}</span>}
+                        {last && <span className="next"> → {suggestNext(entries.filter((e) => e.exerciseId === ex.id), ex)?.short}</span>}
                       </span>
                     </span>
                     {pb && <span className="pb-badge">PB {formatPb(pb, ex.metric)}</span>}
