@@ -62,7 +62,7 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
   const [sets, setSets] = useState<SetDraft[]>(() => (last ? last.sets.map((s) => toDraft(s, metric)) : [blank()]));
   const [stopwatch, setStopwatch] = useState<{ index: number; startedAt: number } | null>(null);
   const [, tick] = useState(0);
-  const suggestion = last ? suggestNext(last.sets, metric) : null;
+  const suggestion = suggestNext(entries.filter((e) => e.exerciseId === exercise.id), exercise);
   const [applied, setApplied] = useState(false);
   const [done, setDone] = useState<Set<number>>(new Set());
   const [plates, setPlates] = useState(false);
