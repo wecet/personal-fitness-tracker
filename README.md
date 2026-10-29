@@ -16,6 +16,7 @@ A personal workout tracker that runs as a web app. Tap a muscle on the body map 
 - **Training load:** your acute:chronic workload ratio across gym and football, with a warning when load spikes.
 - **Tracker:** a contribution graph, a calendar with day detail, and your weekly rhythm.
 - **Progress:** per-exercise history with estimated 1RM, Personal Bests, Bodyweight trend and Year in Review.
+- **Evidence-based estimates:** effort per set is inferred as reps in reserve from your estimated 1RM (Wathen), fatigue decays exponentially per muscle, weekly volume counts hard sets, and training load uses session-RPE with an EWMA acute:chronic ratio. Settings → How the numbers work lists the sources.
 - **Works offline:** changes save on the device and sync when you're back online.
 - **Export backup:** in the drawer, downloads all your data as JSON.
 
