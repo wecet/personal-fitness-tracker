@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api } from './api.ts';
 import { beats, bestSet, muscleFatigue, personalBests, recommend, type MuscleFatigue, type PersonalBest, type Recommendation } from './lib/stats.ts';
-import { dailyLoad, workload, type DayLoad, type Workload } from './lib/load.ts';
+import { dailyLoad, workloadSeries, type DayLoad, type Workload } from './lib/load.ts';
 import { newId, store } from './lib/store.ts';
-import { setStrains } from './lib/strain.ts';
+import { setEfforts, type SetEffort } from './lib/strain.ts';
 import type { MuscleId } from '../shared/muscles.ts';
 import { DEFAULT_SETTINGS, type Activity, type AppState, type Entry, type Exercise, type NewExercise, type RecordKind, type RecordMap, type Records, type Routine, type Settings, type WorkoutSession } from '../shared/types.ts';
 
@@ -25,12 +25,14 @@ interface AppData {
   /** Training load per local day. */
   daily: Map<string, DayLoad>;
   firstDay: string | null;
+  /** Daily acute:chronic workload from the first logged day to today. */
+  loadSeries: Workload[];
   load: Workload;
   exById: Map<number, Exercise>;
   pbs: Map<number, PersonalBest>;
   prEntryIds: Set<string>;
-  /** Inferred effort (0–1) of every logged set, by entry id. */
-  strains: Map<string, number[]>;
+  /** Inferred effort (reps in reserve, hard-set credit, fatigue) of every logged set, by entry id. */
+  efforts: Map<string, SetEffort[]>;
   fatigue: Map<MuscleId, MuscleFatigue>;
   now: number;
   put<K extends RecordKind>(kind: K, record: RecordMap[K]): void;
@@ -77,14 +79,15 @@ export function DataProvider({ state, children }: { state: AppState; children: R
   const sessions = useMemo(() => [...records.session].sort((a, b) => a.startedAt.localeCompare(b.startedAt)), [records.session]);
   const activeSession = sessions.findLast((s) => !s.endedAt) ?? null;
   const routines = useMemo(() => [...records.routine].sort((a, b) => a.name.localeCompare(b.name)), [records.routine]);
-  const strains = useMemo(() => setStrains(entries, exById), [entries, exById]);
+  const efforts = useMemo(() => setEfforts(entries, exById), [entries, exById]);
   const fatigue = useMemo(
-    () => muscleFatigue(entries, exById, now, strains, activities, records.soreness),
-    [entries, exById, now, strains, activities, records.soreness],
+    () => muscleFatigue(entries, exById, now, efforts, activities, records.soreness),
+    [entries, exById, now, efforts, activities, records.soreness],
   );
-  const daily = useMemo(() => dailyLoad(entries, activities, sessions), [entries, activities, sessions]);
+  const daily = useMemo(() => dailyLoad(entries, activities, sessions, efforts), [entries, activities, sessions, efforts]);
   const firstDay = useMemo(() => [...daily.keys()].sort()[0] ?? null, [daily]);
-  const load = useMemo(() => workload(daily, new Date(now), firstDay), [daily, now, firstDay]);
+  const loadSeries = useMemo(() => workloadSeries(daily, firstDay, new Date(now)), [daily, firstDay, now]);
+  const load = loadSeries[loadSeries.length - 1];
   const rec = useMemo(
     () => recommend({ entries, activities, exercises, exById, fatigue, settings, now: new Date(now) }),
     [entries, activities, exercises, exById, fatigue, settings, now],
@@ -116,8 +119,8 @@ export function DataProvider({ state, children }: { state: AppState; children: R
   }, []);
 
   const value = useMemo(
-    () => ({ exercises, records, entries, activities, sessions, activeSession, routines, settings, rec, daily, firstDay, load, exById, pbs, prEntryIds, strains, fatigue, now, put, remove, addEntry, addExercise }),
-    [exercises, records, entries, activities, sessions, activeSession, routines, settings, rec, daily, firstDay, load, exById, pbs, prEntryIds, strains, fatigue, now, put, remove, addEntry, addExercise],
+    () => ({ exercises, records, entries, activities, sessions, activeSession, routines, settings, rec, daily, firstDay, loadSeries, load, exById, pbs, prEntryIds, efforts, fatigue, now, put, remove, addEntry, addExercise }),
+    [exercises, records, entries, activities, sessions, activeSession, routines, settings, rec, daily, firstDay, loadSeries, load, exById, pbs, prEntryIds, efforts, fatigue, now, put, remove, addEntry, addExercise],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

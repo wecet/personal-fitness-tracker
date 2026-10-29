@@ -41,12 +41,12 @@ const names = (ids: MuscleId[]) => {
 };
 
 export function BodyPage() {
-  const { fatigue, rec, entries, exById, now, load, strains } = useData();
+  const { fatigue, rec, entries, exById, now, load, efforts } = useData();
   const { openMuscle, openPlan } = useUi();
   const [mode, setMode] = useMode();
   const [side, setSide] = useState<Side>('front');
 
-  const volume = useMemo(() => weeklySets(entries, exById, now, strains), [entries, exById, now, strains]);
+  const volume = useMemo(() => weeklySets(entries, exById, now, efforts), [entries, exById, now, efforts]);
   const since = useMemo(() => daysSinceTrained(entries, exById, now), [entries, exById, now]);
 
   const overlay = useMemo(() => {
