@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { LineChart, StackedColumns, compact } from '../components/charts.tsx';
 import { useData } from '../data.tsx';
-import { weeklyLoad, workload, ZONE_LABEL, type LoadZone } from '../lib/load.ts';
+import { HIGH_MONOTONY, monotony, weeklyLoad, ZONE_LABEL, type LoadZone } from '../lib/load.ts';
 
 const ZONE_ICON: Record<LoadZone, string> = { baseline: '…', low: '↓', sweet: '✓', caution: '!', spike: '⚠' };
 const ZONE_HINT: Record<LoadZone, string> = {
@@ -16,16 +16,17 @@ const shortDate = (ms: number) => new Date(ms).toLocaleDateString(undefined, { d
 const au = (n: number) => `${compact(Math.round(n))} AU`;
 
 export function LoadPage() {
-  const { daily, firstDay, load, now } = useData();
+  const { daily, loadSeries, load, now } = useData();
   const weeks = useMemo(() => weeklyLoad(daily, new Date(now), 12), [daily, now]);
-  const ratios = useMemo(() => {
-    const today = new Date(now);
-    return Array.from({ length: 42 }, (_, i) => {
-      const day = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 41 + i);
-      const w = workload(daily, day, firstDay);
-      return w.zone === 'baseline' || w.ratio == null ? null : { x: day.getTime(), y: Math.round(w.ratio * 100) / 100 };
-    }).filter((p) => p !== null);
-  }, [daily, firstDay, now]);
+  const ratios = useMemo(
+    () =>
+      loadSeries
+        .slice(-42)
+        .filter((w) => w.zone !== 'baseline' && w.ratio != null)
+        .map((w) => ({ x: w.day.getTime(), y: Math.round(w.ratio! * 100) / 100 })),
+    [loadSeries],
+  );
+  const mono = useMemo(() => monotony(daily, new Date(now)), [daily, now]);
 
   return (
     <div className="page">
@@ -37,8 +38,13 @@ export function LoadPage() {
         </div>
         <p className="muted small">{ZONE_HINT[load.zone]}</p>
         <div className="load-split">
-          <div><strong>{au(load.acute)}</strong><span>last 7 days</span></div>
-          <div><strong>{au(load.chronic)}</strong><span>4-week weekly avg</span></div>
+          <div><strong>{au(load.acute)}</strong><span>acute (per week)</span></div>
+          <div><strong>{au(load.chronic)}</strong><span>chronic (per week)</span></div>
+          <div className={mono.monotony != null && mono.monotony > HIGH_MONOTONY ? 'flag' : ''}>
+            <strong>{mono.monotony == null ? '—' : mono.monotony.toFixed(1)}</strong>
+            <span>monotony{mono.monotony != null && mono.monotony > HIGH_MONOTONY ? ' · vary days' : ''}</span>
+          </div>
+          <div><strong>{mono.strain == null ? '—' : au(mono.strain)}</strong><span>strain (7 days)</span></div>
         </div>
       </section>
 
@@ -70,8 +76,10 @@ export function LoadPage() {
       </section>
 
       <p className="muted small explainer">
-        Load is minutes × effort (session RPE). Football uses the minutes and effort you log; gym sessions use the workout length
-        and the effort you rate when finishing — loose sets count as about 3 minutes at effort 7.
+        Load is minutes × effort (session RPE, Foster 2001). Gym sessions use the length and the effort you rate when finishing;
+        unrated sets count ~3 minutes each at an effort estimated from their reps in reserve. Acute and chronic are 7- and 28-day
+        exponentially weighted averages. Monotony above {HIGH_MONOTONY} means too little difference between hard and easy days.
+        See Settings → How the numbers work for sources.
       </p>
     </div>
   );
