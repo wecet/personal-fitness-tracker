@@ -9,6 +9,9 @@ import { dateKey, formatMinutes, formatSet, formatSets, parseDateKey, weekdayHab
 
 const DAY = 86_400_000;
 const WEEKS_SHOWN = 53;
+/** Cell (12px) + gap (3px) per week column, and the Mon/Wed/Fri label column. */
+const WEEK_WIDTH = 15;
+const DAY_LABEL_WIDTH = 30;
 const MON_FIRST = [1, 2, 3, 4, 5, 6, 0];
 
 /** Monday on or before the given date. */
@@ -23,25 +26,34 @@ function ContributionGraph({ byDay, selected, onSelect }: {
   selected: string;
   onSelect: (key: string) => void;
 }) {
-  const scroller = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(WEEKS_SHOWN);
   const today = new Date();
   const todayKey = dateKey(today);
   const first = startOfWeek(today);
-  first.setDate(first.getDate() - (WEEKS_SHOWN - 1) * 7);
+  first.setDate(first.getDate() - (shown - 1) * 7);
 
-  const weeks = Array.from({ length: WEEKS_SHOWN }, (_, w) =>
+  // Show as many recent weeks as fit the card, so the graph never scrolls sideways.
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => {
+      const fit = Math.floor((e.contentRect.width - DAY_LABEL_WIDTH) / WEEK_WIDTH);
+      setShown(Math.max(4, Math.min(WEEKS_SHOWN, fit)));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const weeks = Array.from({ length: shown }, (_, w) =>
     Array.from({ length: 7 }, (_, d) => new Date(first.getFullYear(), first.getMonth(), first.getDate() + w * 7 + d)),
   );
 
-  useEffect(() => {
-    scroller.current?.scrollTo({ left: scroller.current.scrollWidth });
-  }, []);
-
   return (
-    <div className="graph-scroll" ref={scroller}>
+    <div className="graph-fit" ref={box}>
       <div className="graph">
         <div className="graph-days">
-          {['Mon', '', 'Wed', '', 'Fri', '', ''].map((d, i) => <span key={i}>{d}</span>)}
+          {['Mon', '', 'Wed', '', 'Fri', '', ''].map((d, i) => <span key={i} style={{ gridRow: i + 2 }}>{d}</span>)}
         </div>
         {weeks.map((days, w) => (
           <div className="graph-week" key={w}>
