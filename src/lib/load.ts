@@ -7,7 +7,8 @@ import type { SetEffort } from './strain.ts';
  * Training load is session-RPE: minutes × session effort on the CR-10 scale
  * (Foster et al., 2001, J Strength Cond Res 15:109–115), in arbitrary units (AU).
  * When a gym session wasn't rated, its effort is estimated from the sets' reps in
- * reserve (RPE ≈ 10 − RIR; Zourdos et al., 2016) at ~3 minutes per set.
+ * reserve (RPE ≈ 10 − RIR; Zourdos et al., 2016) at ~3 minutes per set
+ * (plyometrics ≈ 6, mobility ≈ 2).
  *
  * The acute:chronic workload ratio uses exponentially weighted moving averages
  * (Williams et al., 2017, Br J Sports Med 51:209–210), which respond to recent
@@ -57,8 +58,7 @@ export function dailyLoad(
   for (const e of entries) {
     if (e.sessionId && rated.has(e.sessionId)) continue;
     const sets = efforts.get(e.id) ?? [];
-    const meanRir = sets.length ? sets.reduce((sum, s) => sum + s.rir, 0) / sets.length : 3;
-    const rpe = Math.min(10, Math.max(3, 10 - meanRir));
+    const rpe = sets.length ? sets.reduce((sum, s) => sum + s.rpe, 0) / sets.length : 7;
     add(e.performedAt, 'gym', e.sets.length * MINUTES_PER_SET * rpe);
   }
   for (const a of activities) add(a.performedAt, 'football', activityLoad(a));

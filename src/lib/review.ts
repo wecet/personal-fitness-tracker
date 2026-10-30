@@ -50,7 +50,7 @@ export function reviewYear(year: number, entries: Entry[], activities: Activity[
     muscleSets.set(ex.muscle, (muscleSets.get(ex.muscle) ?? 0) + e.sets.length);
     sessionsPerExercise.set(ex.id, (sessionsPerExercise.get(ex.id) ?? 0) + 1);
     volume += entryVolume(e.sets, ex.metric);
-    if (ex.metric === 'weight') {
+    if (ex.metric === 'weight' && ex.kind === 'strength') {
       const top = Math.max(...e.sets.map(estimate1RM));
       const b = best1RM.get(ex.id);
       best1RM.set(ex.id, b ? { first: b.first, last: top, max: Math.max(b.max, top) } : { first: top, last: top, max: top });

@@ -1,13 +1,20 @@
 import { MUSCLE_BY_ID } from '../../shared/muscles.ts';
 import { useData, useUi } from '../data.tsx';
+import type { ProtocolStatus } from '../lib/injuries.ts';
 import { suggestNext } from '../lib/progression.ts';
 import { formatPb, formatSets } from '../lib/stats.ts';
 import { Icon } from './Icon.tsx';
 import { Sheet } from './Sheet.tsx';
 
 export function PlanSheet({ onClose }: { onClose: () => void }) {
-  const { entries, pbs, rec } = useData();
-  const { openMuscle, openFootball, openSoreness } = useUi();
+  const { entries, pbs, rec, exercises } = useData();
+  const { openMuscle, openFootball, openSoreness, openKind } = useUi();
+
+  function logProtocol(p: ProtocolStatus['protocol']) {
+    if (p.exercises === 'plyometric') return openKind('plyometric');
+    const ex = exercises.find((e) => e.name === p.exercises[0]);
+    if (ex) openMuscle(ex.muscle, ex.id);
+  }
 
   return (
     <Sheet title={`${rec.weekday}’s plan`} subtitle={rec.headline} onClose={onClose}>
@@ -31,6 +38,24 @@ export function PlanSheet({ onClose }: { onClose: () => void }) {
         <p className="warning">
           Still recovering: {rec.recovering.map((m) => MUSCLE_BY_ID[m].name).join(', ')} — give {rec.recovering.length === 1 ? 'it' : 'them'} another day.
         </p>
+      )}
+      {rec.injured.length > 0 && (
+        <p className="injury-note">
+          Working around your injury: no {rec.injured.map((m) => MUSCLE_BY_ID[m].name.toLowerCase()).join(', ')} work. <a href="#/injuries">Injuries →</a>
+        </p>
+      )}
+
+      {rec.prevention.length > 0 && (
+        <>
+          <h3 className="section-title">Injury prevention due</h3>
+          <div className="chips">
+            {rec.prevention.map((s) => (
+              <button key={s.protocol.id} className={`chip ${s.priority ? 'coral' : ''}`} onClick={() => logProtocol(s.protocol)}>
+                {s.protocol.name} · {s.done}/{s.protocol.target}
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {rec.exercises.length > 0 ? (

@@ -44,7 +44,7 @@ function working(sets: WorkoutSet[]) {
 /** What to aim for next time, from the exercise's logged history (oldest → newest). */
 export function suggestNext(history: Entry[], ex: Exercise): Suggestion | null {
   const last = history.at(-1);
-  if (!last) return null;
+  if (!last || ex.kind !== 'strength') return null;
   const prev = history.at(-2);
 
   if (ex.metric === 'time') {

@@ -41,6 +41,8 @@ export interface FootballContext {
   avoidLegs: boolean;
   /** Far enough from the next match for heavy lower-body work. */
   legsWindow: boolean;
+  /** 0 on match day; Infinity without a match schedule. */
+  daysToMatch: number;
 }
 
 export function footballContext(now: Date, settings: Settings, activities: Activity[]): FootballContext {
@@ -50,7 +52,7 @@ export function footballContext(now: Date, settings: Settings, activities: Activ
   const daysToMatch = settings.matchDays.length ? Math.min(...settings.matchDays.map((m) => (m - d + 7) % 7)) : Infinity;
   const matchYesterday = settings.matchDays.includes((d + 6) % 7) || playedYesterday;
   const training = settings.trainingDays.includes(d);
-  const none: FootballContext = { label: null, note: null, restDay: false, avoidLegs: false, legsWindow: false };
+  const none: FootballContext = { label: null, note: null, restDay: false, avoidLegs: false, legsWindow: false, daysToMatch };
 
   if (daysToMatch === 0) return { ...none, label: 'Match day', note: 'Match day — save your legs and log the game afterwards.', restDay: true, avoidLegs: true };
   if (daysToMatch === 1) return { ...none, label: 'MD-1', note: 'Match tomorrow — keep your legs fresh. Upper body or rest.', avoidLegs: true };

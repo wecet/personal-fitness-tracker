@@ -4,8 +4,9 @@ import { beats, bestSet, muscleFatigue, personalBests, recommend, type MuscleFat
 import { dailyLoad, workloadSeries, type DayLoad, type Workload } from './lib/load.ts';
 import { newId, store } from './lib/store.ts';
 import { setEfforts, type SetEffort } from './lib/strain.ts';
+import { preventionStatus, type ProtocolStatus } from './lib/injuries.ts';
 import type { MuscleId } from '../shared/muscles.ts';
-import { DEFAULT_SETTINGS, type Activity, type AppState, type Entry, type Exercise, type NewExercise, type RecordKind, type RecordMap, type Records, type Routine, type Settings, type WorkoutSession } from '../shared/types.ts';
+import { DEFAULT_SETTINGS, type Activity, type AppState, type Entry, type Exercise, type ExerciseKind, type Injury, type NewExercise, type RecordKind, type RecordMap, type Records, type Routine, type Settings, type WorkoutSession } from '../shared/types.ts';
 
 export type NewEntry = Omit<Entry, 'id' | 'note'> & { note?: string | null };
 
@@ -20,6 +21,10 @@ interface AppData {
   sessions: WorkoutSession[];
   activeSession: WorkoutSession | null;
   routines: Routine[];
+  /** Newest first. */
+  injuries: Injury[];
+  /** This week's injury-prevention work. */
+  prevention: ProtocolStatus[];
   settings: Settings;
   rec: Recommendation;
   /** Training load per local day. */
@@ -79,6 +84,8 @@ export function DataProvider({ state, children }: { state: AppState; children: R
   const sessions = useMemo(() => [...records.session].sort((a, b) => a.startedAt.localeCompare(b.startedAt)), [records.session]);
   const activeSession = sessions.findLast((s) => !s.endedAt) ?? null;
   const routines = useMemo(() => [...records.routine].sort((a, b) => a.name.localeCompare(b.name)), [records.routine]);
+  const injuries = useMemo(() => [...records.injury].sort((a, b) => b.startedAt.localeCompare(a.startedAt)), [records.injury]);
+  const prevention = useMemo(() => preventionStatus(entries, exById, injuries, new Date(now)), [entries, exById, injuries, now]);
   const efforts = useMemo(() => setEfforts(entries, exById), [entries, exById]);
   const fatigue = useMemo(
     () => muscleFatigue(entries, exById, now, efforts, activities, records.soreness),
@@ -89,8 +96,8 @@ export function DataProvider({ state, children }: { state: AppState; children: R
   const loadSeries = useMemo(() => workloadSeries(daily, firstDay, new Date(now)), [daily, firstDay, now]);
   const load = loadSeries[loadSeries.length - 1];
   const rec = useMemo(
-    () => recommend({ entries, activities, exercises, exById, fatigue, settings, now: new Date(now) }),
-    [entries, activities, exercises, exById, fatigue, settings, now],
+    () => recommend({ entries, activities, exercises, exById, fatigue, settings, injuries, prevention, now: new Date(now) }),
+    [entries, activities, exercises, exById, fatigue, settings, injuries, prevention, now],
   );
 
   const put = useCallback(<K extends RecordKind>(kind: K, record: RecordMap[K]) => {
@@ -119,8 +126,8 @@ export function DataProvider({ state, children }: { state: AppState; children: R
   }, []);
 
   const value = useMemo(
-    () => ({ exercises, records, entries, activities, sessions, activeSession, routines, settings, rec, daily, firstDay, loadSeries, load, exById, pbs, prEntryIds, efforts, fatigue, now, put, remove, addEntry, addExercise }),
-    [exercises, records, entries, activities, sessions, activeSession, routines, settings, rec, daily, firstDay, loadSeries, load, exById, pbs, prEntryIds, efforts, fatigue, now, put, remove, addEntry, addExercise],
+    () => ({ exercises, records, entries, activities, sessions, activeSession, routines, injuries, prevention, settings, rec, daily, firstDay, loadSeries, load, exById, pbs, prEntryIds, efforts, fatigue, now, put, remove, addEntry, addExercise }),
+    [exercises, records, entries, activities, sessions, activeSession, routines, injuries, prevention, settings, rec, daily, firstDay, loadSeries, load, exById, pbs, prEntryIds, efforts, fatigue, now, put, remove, addEntry, addExercise],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -141,6 +148,8 @@ export type SheetState =
   | { type: 'soreness' }
   | { type: 'history'; exerciseId: number }
   | { type: 'routine'; routineId?: string }
+  | { type: 'injury'; injuryId?: string }
+  | { type: 'kind'; kind: Exclude<ExerciseKind, 'strength'> }
   | null;
 
 interface UiActions {
@@ -151,6 +160,9 @@ interface UiActions {
   openSoreness(): void;
   openHistory(exerciseId: number): void;
   openRoutine(routineId?: string): void;
+  openInjury(injuryId?: string): void;
+  /** All plyometric or mobility exercises, across muscles. */
+  openKind(kind: Exclude<ExerciseKind, 'strength'>): void;
   openQuick(): void;
   notify(message: string, tone?: 'default' | 'pb' | 'error', action?: ToastAction): void;
 }

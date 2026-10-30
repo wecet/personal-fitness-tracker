@@ -1,5 +1,6 @@
 import { useRef, useState, type PointerEvent } from 'react';
 import { MUSCLE_BY_ID, type MuscleId } from '../../shared/muscles.ts';
+import type { BodySide } from '../lib/injuries.ts';
 import { BACK, BACK_DETAILS, both, EAR, FRONT, FRONT_DETAILS, HEAD, SILHOUETTE, VIEWBOX } from './bodyPaths.ts';
 
 export type Side = 'front' | 'back';
@@ -23,18 +24,25 @@ const [BODY_L, BODY_R] = both(SILHOUETTE);
 const [HEAD_L, HEAD_R] = both(HEAD);
 const EARS = both(EAR);
 
+/**
+ * Paths alternate viewer-left half, mirrored half (see both()). Facing you, the
+ * viewer's left is the body's right; from behind it's the body's left.
+ */
+const bodySide = (side: Side, index: number): BodySide => ((index % 2 === 0) === (side === 'front') ? 'right' : 'left');
+
 interface FigureProps {
   side: Side;
   /** 0–1 fill strength per muscle. */
   overlay: Map<MuscleId, number>;
   tone: OverlayTone;
   suggested: MuscleId[];
+  injured: Map<MuscleId, Set<BodySide>>;
   hover: MuscleId | null;
   onHover: (m: MuscleId | null) => void;
   onSelect: (m: MuscleId) => void;
 }
 
-function Figure({ side, overlay, tone, suggested, hover, onHover, onSelect }: FigureProps) {
+function Figure({ side, overlay, tone, suggested, injured, hover, onHover, onSelect }: FigureProps) {
   const { muscles, details } = FIGURES[side];
   const id = (name: string) => `${side}-${name}`;
   const url = (name: string) => `url(#${id(name)})`;
@@ -158,14 +166,22 @@ function Figure({ side, overlay, tone, suggested, hover, onHover, onSelect }: Fi
       <g className="details">
         {details.map((d, i) => <path key={i} d={d} />)}
       </g>
+
+      {/* Injured areas: dashed outline above every overlay, so it reads in any mode. */}
+      <g className="injured" pointerEvents="none">
+        {muscles.flatMap(([m, paths]) =>
+          paths.map((d, i) => (injured.get(m)?.has(bodySide(side, i)) ? <path key={`${m}-${i}`} d={d} /> : null)),
+        )}
+      </g>
     </svg>
   );
 }
 
-export function BodyMap({ overlay, tone, suggested, onSelect, side, onSideChange }: {
+export function BodyMap({ overlay, tone, suggested, injured, onSelect, side, onSideChange }: {
   overlay: Map<MuscleId, number>;
   tone: OverlayTone;
   suggested: MuscleId[];
+  injured: Map<MuscleId, Set<BodySide>>;
   onSelect: (m: MuscleId) => void;
   side: Side;
   onSideChange: (side: Side) => void;
@@ -202,7 +218,7 @@ export function BodyMap({ overlay, tone, suggested, onSelect, side, onSideChange
   };
 
   const rotateY = (side === 'back' ? 180 : 0) + tilt.y;
-  const figureProps = { overlay, tone, suggested, hover, onHover: setHover, onSelect: select };
+  const figureProps = { overlay, tone, suggested, injured, hover, onHover: setHover, onSelect: select };
 
   return (
     <div className="bodymap">

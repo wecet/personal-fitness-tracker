@@ -2,13 +2,14 @@ import { useEffect } from 'react';
 import { Brand } from './Brand.tsx';
 import { Icon, type IconName } from './Icon.tsx';
 
-export type Route = 'body' | 'tracker' | 'routines' | 'progress' | 'settings';
+export type Route = 'body' | 'tracker' | 'routines' | 'progress' | 'injuries' | 'settings';
 
 export const ROUTES: { id: Route; label: string; icon: IconName }[] = [
   { id: 'body', label: 'Home', icon: 'body' },
   { id: 'tracker', label: 'Tracker', icon: 'calendar' },
   { id: 'routines', label: 'Routines', icon: 'list' },
   { id: 'progress', label: 'Progress', icon: 'chart' },
+  { id: 'injuries', label: 'Injuries', icon: 'shield' },
   { id: 'settings', label: 'Settings', icon: 'settings' },
 ];
 

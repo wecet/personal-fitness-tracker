@@ -606,3 +606,65 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .science summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
 .science details p { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
 .sources { margin: 0 0 12px; padding-left: 16px; list-style: disc; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+
+/* ---------- plyometrics, mobility, injuries ---------- */
+:root { --injury: #f5b14c; }
+.exercise-detail { display: block; font-size: 12.5px; font-weight: 400; color: var(--muted); }
+.kind-group { display: flex; flex-direction: column; gap: 8px; }
+.kind-group .section-title { margin: 4px 0 0; }
+
+.tag { flex-shrink: 0; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; background: var(--surface); color: var(--muted); }
+.tag.priority { background: color-mix(in srgb, var(--coral) 18%, transparent); color: var(--coral); }
+.tag.injury, .tag.sev-severe { background: color-mix(in srgb, var(--injury) 18%, transparent); color: var(--injury); }
+.tag.sev-moderate { background: color-mix(in srgb, var(--injury) 10%, transparent); color: var(--injury); }
+
+.injury-banner {
+  width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 12px; border-radius: 10px; font-size: 14px;
+  background: color-mix(in srgb, var(--injury) 12%, transparent); color: var(--injury);
+}
+.injury-banner > span { flex: 1; }
+.injury-note { margin: 0; padding: 10px 12px; border-radius: 10px; font-size: 14px; background: color-mix(in srgb, var(--injury) 10%, transparent); color: var(--injury); }
+.injury-note a { color: inherit; font-weight: 600; white-space: nowrap; }
+
+.injured path { fill: none; stroke: var(--injury); stroke-width: 1.3; stroke-dasharray: 3 2; stroke-linejoin: round; }
+.home-injury { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13.5px; color: var(--injury); }
+.injury-swatch { width: 14px; height: 0; border-top: 2px dashed var(--injury); }
+
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.card-head h3, .card > h3 { margin: 0; }
+.protocols { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.protocol { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px; border-radius: 12px; background: var(--surface-2); }
+.protocol-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.protocol-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.protocol-count { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; color: var(--muted); }
+.pips { display: flex; gap: 4px; }
+.pips span { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--border); }
+.pips span.on { background: var(--coral); border-color: var(--coral); }
+.protocol.met .protocol-count { color: var(--success); }
+.protocol.met .pips span.on { background: var(--success); border-color: var(--success); }
+
+.injury-card { display: flex; flex-direction: column; gap: 10px; border-color: color-mix(in srgb, var(--injury) 45%, var(--border)); }
+.injury-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.injury-head h3, .injury-head p { margin: 0; }
+.injury-card .injury-note { background: var(--surface-2); color: var(--text); }
+
+.stat-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+.stat-row > div { display: flex; flex-direction: column; min-width: 0; }
+.stat-row strong { font-size: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.injury-history { display: flex; flex-direction: column; }
+.injury-history button { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 0; border-top: 1px solid var(--border); }
+.injury-history button > span:first-child { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.page-note { margin: 0; text-align: center; }
+
+.injury-form { display: flex; flex-direction: column; gap: 4px; }
+.injury-form .sore-group { margin-bottom: 10px; }
+.injury-form textarea {
+  width: 100%; padding: 10px 12px; border-radius: 10px; resize: vertical; font: inherit; font-size: 16px;
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+}
+.injury-form textarea:focus { outline: none; border-color: var(--coral); }
+.injury-form .btn.block { margin-top: 12px; }
+.injury-form .btn.block + .btn.block { margin-top: 0; }
+.check-field { flex-direction: row; align-items: center; flex-wrap: wrap; }
+.check-field input[type='checkbox'] { width: 20px; height: 20px; padding: 0; accent-color: var(--coral); }
+.btn.danger { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 40%, var(--border)); }

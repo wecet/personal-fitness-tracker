@@ -5,12 +5,18 @@ export type ExerciseMetric = 'weight' | 'bodyweight' | 'time';
 
 export const EXERCISE_METRICS: ExerciseMetric[] = ['weight', 'bodyweight', 'time'];
 
+/** Strength work builds fatigue from effort; plyometrics from ground contacts; mobility adds none. */
+export type ExerciseKind = 'strength' | 'plyometric' | 'mobility';
+
+export const EXERCISE_KINDS: ExerciseKind[] = ['strength', 'plyometric', 'mobility'];
+
 export interface Exercise {
   id: number;
   name: string;
   muscle: MuscleId;
   secondary: MuscleId[];
   metric: ExerciseMetric;
+  kind: ExerciseKind;
   custom: boolean;
 }
 
@@ -19,6 +25,7 @@ export interface NewExercise {
   muscle: MuscleId;
   secondary?: MuscleId[];
   metric?: ExerciseMetric;
+  kind?: ExerciseKind;
 }
 
 export interface WorkoutSet {
@@ -109,6 +116,31 @@ export interface BodyweightLog {
   kg: number;
 }
 
+/** Joints and regions you can hurt that aren't one of the body-map muscles. */
+export type JointArea = 'knee' | 'ankle' | 'foot' | 'wrist' | 'elbow' | 'neck';
+
+export const JOINT_AREAS: JointArea[] = ['knee', 'ankle', 'foot', 'wrist', 'elbow', 'neck'];
+
+export type InjuryArea = MuscleId | JointArea;
+
+export type InjurySide = 'left' | 'right' | 'both';
+
+export type InjuryContext = 'match' | 'training' | 'gym' | 'other';
+
+export const INJURY_CONTEXTS: InjuryContext[] = ['match', 'training', 'gym', 'other'];
+
+export interface Injury {
+  id: string;
+  area: InjuryArea;
+  side: InjurySide | null;
+  /** Local date, YYYY-MM-DD. */
+  startedAt: string;
+  /** Local date you were back to full training; null while ongoing. */
+  resolvedAt: string | null;
+  context: InjuryContext;
+  note: string | null;
+}
+
 /**
  * Every user record kind. Records carry a client-generated string id so they
  * can be created offline and synced later; a put with an existing id overwrites.
@@ -121,11 +153,12 @@ export interface RecordMap {
   soreness: Soreness;
   routine: Routine;
   bodyweight: BodyweightLog;
+  injury: Injury;
 }
 
 export type RecordKind = keyof RecordMap;
 
-const KINDS: Record<RecordKind, true> = { entry: true, activity: true, settings: true, session: true, soreness: true, routine: true, bodyweight: true };
+const KINDS: Record<RecordKind, true> = { entry: true, activity: true, settings: true, session: true, soreness: true, routine: true, bodyweight: true, injury: true };
 export const RECORD_KINDS = Object.keys(KINDS) as RecordKind[];
 
 export type Records = { [K in RecordKind]: RecordMap[K][] };

@@ -77,6 +77,7 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
   const top = parsed && bestSet(parsed, metric);
   const beatsPb = !!(pb && top && beats(top, pb, metric));
   const [primaryLabel, joiner, weightLabel] = COLUMNS[metric];
+  const repsLabel = exercise.kind === 'plyometric' ? (metric === 'weight' ? 'Throws' : 'Contacts') : primaryLabel;
 
   const update = (i: number, patch: Partial<SetDraft>) => setSets((s) => s.map((d, j) => (j === i ? { ...d, ...patch } : d)));
   const elapsed = (startedAt: number) => Math.max(1, Math.round((Date.now() - startedAt) / 1000));
@@ -128,7 +129,7 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
       <div className="logger-sets">
         <div className="set-row set-head">
           <span>Set</span>
-          <span>{primaryLabel}</span>
+          <span>{repsLabel}</span>
           <span />
           <span>{weightLabel}</span>
           <span />
