@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { Brand } from './components/Brand.tsx';
 import { Drawer, ROUTES, type Route } from './components/Drawer.tsx';
 import { Icon } from './components/Icon.tsx';
+import { SheetBack } from './components/Sheet.tsx';
 import { FootballSheet } from './components/FootballSheet.tsx';
 import { HistorySheet } from './components/HistorySheet.tsx';
 import { InjurySheet } from './components/InjurySheet.tsx';
@@ -79,14 +80,16 @@ export function App() {
   const { route, tab } = useRoute();
   const { state, status, pending } = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [sheet, setSheet] = useState<SheetState>(null);
+  // Sheets opened from another sheet stack up, so their back button returns to it.
+  const [sheets, setSheets] = useState<NonNullable<SheetState>[]>([]);
+  const sheet = sheets.at(-1) ?? null;
   const [toast, setToast] = useState<Toast | null>(null);
 
   const planChecked = useRef(false);
   useEffect(() => {
     if (!state || planChecked.current) return;
     planChecked.current = true;
-    if (shouldAutoShowPlan(state)) setSheet({ type: 'plan' });
+    if (shouldAutoShowPlan(state)) setSheets([{ type: 'plan' }]);
   }, [state]);
 
   useEffect(() => {
@@ -96,26 +99,30 @@ export function App() {
   }, [toast]);
 
   const ui = useMemo(
-    () => ({
-      openMuscle: (muscle: Parameters<typeof MuscleSheet>[0]['muscle'], exerciseId?: number) =>
-        setSheet({ type: 'muscle', muscle, exerciseId }),
-      openPlan: () => setSheet({ type: 'plan' }),
-      openFootball: () => setSheet({ type: 'football' }),
-      openSummary: (sessionId: string) => setSheet({ type: 'summary', sessionId }),
-      openSoreness: () => setSheet({ type: 'soreness' }),
-      openHistory: (exerciseId: number) => setSheet({ type: 'history', exerciseId }),
-      openRoutine: (routineId?: string) => setSheet({ type: 'routine', routineId }),
-      openInjury: (injuryId?: string) => setSheet({ type: 'injury', injuryId }),
-      openKind: (kind: 'plyometric' | 'mobility') => setSheet({ type: 'kind', kind }),
-      openQuick: () => setSheet({ type: 'quick' }),
-      notify: (message: string, tone: Toast['tone'] = 'default', action?: ToastAction) => setToast({ id: Date.now(), message, tone, action }),
-    }),
+    () => {
+      const open = (next: NonNullable<SheetState>) => setSheets((stack) => [...stack, next]);
+      return {
+        openMuscle: (muscle: Parameters<typeof MuscleSheet>[0]['muscle'], exerciseId?: number) =>
+          open({ type: 'muscle', muscle, exerciseId }),
+        openPlan: () => open({ type: 'plan' }),
+        openFootball: () => open({ type: 'football' }),
+        openSummary: (sessionId: string) => open({ type: 'summary', sessionId }),
+        openSoreness: () => open({ type: 'soreness' }),
+        openHistory: (exerciseId: number) => open({ type: 'history', exerciseId }),
+        openRoutine: (routineId?: string) => open({ type: 'routine', routineId }),
+        openInjury: (injuryId?: string) => open({ type: 'injury', injuryId }),
+        openKind: (kind: 'plyometric' | 'mobility') => open({ type: 'kind', kind }),
+        openQuick: () => open({ type: 'quick' }),
+        notify: (message: string, tone: Toast['tone'] = 'default', action?: ToastAction) => setToast({ id: Date.now(), message, tone, action }),
+      };
+    },
     [],
   );
   useEffect(() => {
     store.onRejected = (errors) => ui.notify(`Couldn’t save: ${errors[0]}`, 'error');
   }, [ui]);
-  const closeSheet = useCallback(() => setSheet(null), []);
+  const closeSheet = useCallback(() => setSheets([]), []);
+  const backSheet = useCallback(() => setSheets((open) => open.slice(0, -1)), []);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
   const title = ROUTES.find((r) => r.id === route)!.label;
   const inWorkout = !!state?.records.session.some((s) => !s.endedAt);
@@ -155,6 +162,7 @@ export function App() {
             {route === 'progress' && <ProgressPage tab={tab} />}
             {route === 'injuries' && <InjuriesPage />}
             {route === 'settings' && <SettingsPage />}
+            <SheetBack.Provider value={sheets.length > 1 ? backSheet : undefined}>
             {sheet?.type === 'muscle' && (
               <MuscleSheet key={`${sheet.muscle}-${sheet.exerciseId}`} muscle={sheet.muscle} exerciseId={sheet.exerciseId} onClose={closeSheet} />
             )}
@@ -167,6 +175,7 @@ export function App() {
             {sheet?.type === 'injury' && <InjurySheet key={sheet.injuryId ?? 'new'} injuryId={sheet.injuryId} onClose={closeSheet} />}
             {sheet?.type === 'kind' && <KindSheet key={sheet.kind} kind={sheet.kind} onClose={closeSheet} />}
             {sheet?.type === 'summary' && <SummarySheet sessionId={sheet.sessionId} onClose={closeSheet} />}
+            </SheetBack.Provider>
             <SessionBar />
             </SessionProvider>
           </DataProvider>
