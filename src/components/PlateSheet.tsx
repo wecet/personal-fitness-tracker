@@ -30,7 +30,7 @@ export function PlateSheet({ initialKg, onClose }: { initialKg?: number; onClose
 
   return (
     <Sheet title="Plate calculator" subtitle="Plates per side" onClose={onClose}>
-      <label className="field" style={{ marginTop: 0 }}>
+      <label className="field">
         <span className="field-head"><span>Target weight (kg)</span></span>
         <input inputMode="decimal" placeholder="e.g. 100" value={target} onChange={(e) => setTarget(e.target.value)} autoFocus={!initialKg} />
       </label>

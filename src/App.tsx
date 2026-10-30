@@ -128,7 +128,7 @@ export function App() {
         <div className="topbar-end">
           <SyncBadge status={status} pending={pending} />
           {state && !inWorkout && (
-            <button className="add-btn" onClick={ui.openQuick} aria-label="Log a workout, football, mobility or an injury">
+            <button className="add-btn" onClick={ui.openQuick} aria-label="Log">
               <Icon name="plus" size={20} />
             </button>
           )}

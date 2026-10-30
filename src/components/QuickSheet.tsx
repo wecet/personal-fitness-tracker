@@ -3,22 +3,22 @@ import { useSession } from '../session.tsx';
 import { Icon, type IconName } from './Icon.tsx';
 import { Sheet } from './Sheet.tsx';
 
-function Action({ icon, title, detail, tone, onClick }: { icon: IconName; title: string; detail?: string; tone?: string; onClick: () => void }) {
+function Tile({ icon, label, tone, onClick }: { icon: IconName; label: string; tone?: string; onClick: () => void }) {
   return (
-    <button className={`quick-action ${tone ?? ''}`} onClick={onClick}>
-      <span className="quick-action-icon"><Icon name={icon} /></span>
-      <span>
-        <strong>{title}</strong>
-        {detail && <span className="muted small">{detail}</span>}
-      </span>
+    <button className={`quick-tile ${tone ?? ''}`} onClick={onClick}>
+      <Icon name={icon} />
+      <span>{label}</span>
     </button>
   );
 }
 
-/** Everything you can log from home, behind the + button. */
+/**
+ * The everyday logging actions behind the + button: one primary action and a few
+ * equal alternatives. Rarer actions (soreness, injuries) live where they're used.
+ */
 export function QuickSheet({ onClose }: { onClose: () => void }) {
-  const { routines, activeSession } = useData();
-  const { openFootball, openSoreness, openRoutine, openKind, openInjury } = useUi();
+  const { routines } = useData();
+  const { openFootball, openKind } = useUi();
   const { startWorkout } = useSession();
 
   const start = (routineId?: string) => {
@@ -28,20 +28,20 @@ export function QuickSheet({ onClose }: { onClose: () => void }) {
 
   return (
     <Sheet title="Log" onClose={onClose}>
-      <div className="quick-actions-list">
-        {!activeSession && <Action icon="timer" tone="coral" title="Start workout" detail="Rest timer and summary" onClick={() => start()} />}
-        {!activeSession &&
-          routines.map((r) => (
-            <Action key={r.id} icon="list" title={r.name} detail={`Start routine · ${r.items.length} exercises`} onClick={() => start(r.id)} />
+      <button className="btn primary block" onClick={() => start()}>
+        <Icon name="timer" size={18} /> Start workout
+      </button>
+      {routines.length > 0 && (
+        <div className="chips quick-routines">
+          {routines.map((r) => (
+            <button key={r.id} className="chip" onClick={() => start(r.id)}>{r.name}</button>
           ))}
-        {!activeSession && routines.length === 0 && (
-          <Action icon="list" title="Create a routine" detail="Save a workout you repeat" onClick={() => openRoutine()} />
-        )}
-        <Action icon="ball" tone="pitch" title="Log football" detail="Match or training" onClick={openFootball} />
-        <Action icon="jump" title="Plyometrics" detail="Jumps, bounds and throws" onClick={() => openKind('plyometric')} />
-        <Action icon="stretch" title="Mobility" detail="Stretching and activation" onClick={() => openKind('mobility')} />
-        <Action icon="pulse" title="How do you feel?" detail="Mark sore muscles" onClick={openSoreness} />
-        <Action icon="shield" title="Log an injury" detail="Plans work around it" onClick={() => openInjury()} />
+        </div>
+      )}
+      <div className="quick-tiles">
+        <Tile icon="ball" tone="pitch" label="Football" onClick={openFootball} />
+        <Tile icon="jump" label="Plyometrics" onClick={() => openKind('plyometric')} />
+        <Tile icon="stretch" label="Mobility" onClick={() => openKind('mobility')} />
       </div>
     </Sheet>
   );
