@@ -1,7 +1,7 @@
-// Caches the app shell so Ember opens without a connection. Data itself is
+// Caches the app shell so Tempo opens without a connection. Data itself is
 // cached and queued by the app (see src/lib/store.ts), never by this worker.
-const CACHE = 'ember-shell-v2';
-const SHELL = ['/', '/manifest.webmanifest', '/icon.svg?v=2', '/apple-touch-icon.png?v=2'];
+const CACHE = 'tempo-shell-v3';
+const SHELL = ['/', '/manifest.webmanifest', '/icon.svg?v=3', '/apple-touch-icon.png?v=3'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));

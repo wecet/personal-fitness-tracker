@@ -149,7 +149,7 @@ export function App() {
             <div className="page empty"><div className="spinner" /></div>
           ) : (
             <div className="page empty">
-              <p>Couldn’t reach the server. Connect once to download your data — after that Ember works offline.</p>
+              <p>Couldn’t reach the server. Connect once to download your data — after that Tempo works offline.</p>
               <button className="btn primary" onClick={() => store.flush()}>Retry</button>
             </div>
           )

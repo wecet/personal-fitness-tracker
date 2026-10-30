@@ -1,5 +1,6 @@
 services:
-  # Joins your tailnet as "ember" and serves the app over HTTPS at
+  # Joins your tailnet as "ember" (the app's original name; kept so the URL
+  # stays the same) and serves the app over HTTPS at
   # https://ember.<your-tailnet>.ts.net — only reachable by your own devices.
   tailscale:
     image: tailscale/tailscale:stable

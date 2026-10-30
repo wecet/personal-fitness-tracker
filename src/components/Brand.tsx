@@ -1,13 +1,13 @@
-export const FLAME_PATH =
-  'M12 2c1 3.6 5 6.1 5 11.2A5 5 0 0 1 7 13.4c0-2.6 1.3-4.4 2.6-5.6.2 1.9 1 3.1 2.3 3.6C11.2 8.6 11 5.2 12 2z';
-
+/** Three rising bars: training load building to full heat. */
 export function Brand() {
   return (
     <span className="brand">
       <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-        <path d={FLAME_PATH} fill="var(--coral)" />
+        <rect x="3" y="13" width="4.5" height="8" rx="2.25" fill="var(--coral)" opacity="0.4" />
+        <rect x="9.75" y="8.5" width="4.5" height="12.5" rx="2.25" fill="var(--coral)" opacity="0.7" />
+        <rect x="16.5" y="3" width="4.5" height="18" rx="2.25" fill="var(--coral)" />
       </svg>
-      ember
+      tempo
     </span>
   );
 }

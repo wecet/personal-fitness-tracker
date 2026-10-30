@@ -39,7 +39,7 @@ export function SettingsPage() {
     <div className="page">
       <section className="card">
         <h3>Football schedule</h3>
-        <p className="muted small">Ember plans your gym days around these — no heavy legs the day before or after a match, or on training days.</p>
+        <p className="muted small">Tempo plans your gym days around these — no heavy legs the day before or after a match, or on training days.</p>
         <DayPicker label="Match days" hint="Usually one day a week." value={settings.matchDays} onChange={(matchDays) => update({ matchDays })} />
         <DayPicker label="Training days" hint="Include days you only sometimes train." value={settings.trainingDays} onChange={(trainingDays) => update({ trainingDays })} />
       </section>
