@@ -18,7 +18,7 @@ function Action({ icon, title, detail, tone, onClick }: { icon: IconName; title:
 /** Everything you can log from home, behind the + button. */
 export function QuickSheet({ onClose }: { onClose: () => void }) {
   const { routines, activeSession } = useData();
-  const { openFootball, openSoreness, openRoutine } = useUi();
+  const { openFootball, openSoreness, openRoutine, openKind, openInjury } = useUi();
   const { startWorkout } = useSession();
 
   const start = (routineId?: string) => {
@@ -38,7 +38,10 @@ export function QuickSheet({ onClose }: { onClose: () => void }) {
           <Action icon="list" title="Create a routine" detail="Save a workout you repeat" onClick={() => openRoutine()} />
         )}
         <Action icon="ball" tone="pitch" title="Log football" detail="Match or training" onClick={openFootball} />
+        <Action icon="jump" title="Plyometrics" detail="Jumps, bounds and throws" onClick={() => openKind('plyometric')} />
+        <Action icon="stretch" title="Mobility" detail="Stretching and activation" onClick={() => openKind('mobility')} />
         <Action icon="pulse" title="How do you feel?" detail="Mark sore muscles" onClick={openSoreness} />
+        <Action icon="shield" title="Log an injury" detail="Plans work around it" onClick={() => openInjury()} />
       </div>
     </Sheet>
   );

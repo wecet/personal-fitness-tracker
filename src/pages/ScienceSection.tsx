@@ -50,6 +50,34 @@ const TOPICS: { title: string; body: string; sources: string[] }[] = [
     ],
   },
   {
+    title: 'Plyometrics and mobility',
+    body:
+      'Plyometrics aren’t taken to failure, so they’re dosed by ground contacts weighted by intensity: pogo hops count about a third as much as depth jumps, bounds or single-leg hops. 80–140 contacts is a full session. They add leg fatigue but don’t count towards weekly hard sets. Stretching and mobility work are logged without adding fatigue.',
+    sources: [
+      'Potach DH, Chu DA (2016). Program design and technique for plyometric training. In: Essentials of Strength Training and Conditioning, 4th ed. NSCA.',
+      'Behm DG et al. (2016). Acute effects of muscle stretching on physical performance, range of motion, and injury incidence. Appl Physiol Nutr Metab 41(1):1–11.',
+    ],
+  },
+  {
+    title: 'Injury prevention',
+    body:
+      'Weekly targets come from randomised trials in footballers: Nordic curls (about half as many hamstring injuries), the Copenhagen adduction programme (41% fewer groin problems), FIFA 11+-style jumping and landing work (around a third fewer injuries) and single-leg balance training (about a third fewer repeat ankle sprains). Eccentric work isn’t suggested within two days of a match. A previous injury is the strongest risk factor for the next one, so regions you’ve hurt in the last year are marked as a priority.',
+    sources: [
+      'van Dyk N et al. (2019). Including the Nordic hamstring exercise in injury prevention programmes halves the rate of hamstring injuries. Br J Sports Med 53:1362–1370.',
+      'Harøy J et al. (2019). The Adductor Strengthening Programme prevents groin problems among male football players. Br J Sports Med 53:150–157.',
+      'Thorborg K et al. (2017). Effect of specific exercise-based football injury prevention programmes: meta-analysis of FIFA 11 and 11+. Br J Sports Med 51:562–571.',
+      'Hupperets MDW et al. (2009). Effect of unsupervised home based proprioceptive training on recurrences of ankle sprain. BMJ 339:b2684.',
+      'Hägglund M et al. (2006). Previous injury as a risk factor for injury in elite football. Br J Sports Med 40:767–772.',
+      'Green B et al. (2020). Recalibrating the risk of hamstring strain injury: systematic review and meta-analysis. Br J Sports Med 54:1081–1088.',
+    ],
+  },
+  {
+    title: 'Injury log',
+    body:
+      'Injured areas are outlined on the body map and kept out of your plan, along with exercises that use them. Severity follows the football injury consensus, based on days until you’re back to full training: minimal (1–3), mild (4–7), moderate (8–28), severe (over 28).',
+    sources: ['Fuller CW et al. (2006). Consensus statement on injury definitions and data collection procedures in football. Br J Sports Med 40:193–201.'],
+  },
+  {
     title: 'Progression suggestions',
     body:
       'Add weight once you hit the top of the rep range on every set two sessions in a row (+~2.5% upper body, +~5% lower body); otherwise add a rep.',

@@ -11,6 +11,7 @@ interface ExerciseRow {
   muscle: string;
   secondary: string;
   metric: string;
+  kind: string;
   custom: number;
 }
 
@@ -20,6 +21,7 @@ const toExercise = (r: ExerciseRow): Exercise => ({
   muscle: r.muscle as Exercise['muscle'],
   secondary: JSON.parse(r.secondary),
   metric: r.metric as Exercise['metric'],
+  kind: r.kind as Exercise['kind'],
   custom: r.custom === 1,
 });
 
@@ -27,6 +29,9 @@ function migrate(db: DatabaseSync) {
   const columns = db.prepare('PRAGMA table_info(exercises)').all() as unknown as { name: string }[];
   if (!columns.some((c) => c.name === 'metric')) {
     db.exec("ALTER TABLE exercises ADD COLUMN metric TEXT NOT NULL DEFAULT 'weight'");
+  }
+  if (!columns.some((c) => c.name === 'kind')) {
+    db.exec("ALTER TABLE exercises ADD COLUMN kind TEXT NOT NULL DEFAULT 'strength'");
   }
 
   // v1 kept entries in their own table with integer ids; move them into the record store.
@@ -59,6 +64,7 @@ export function openDb(path: string) {
       muscle TEXT NOT NULL,
       secondary TEXT NOT NULL DEFAULT '[]',
       metric TEXT NOT NULL DEFAULT 'weight',
+      kind TEXT NOT NULL DEFAULT 'strength',
       custom INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS records (
@@ -73,12 +79,12 @@ export function openDb(path: string) {
 
   // Library exercises are kept in sync with the code; custom ones are left alone.
   const seed = db.prepare(`
-    INSERT INTO exercises (name, muscle, secondary, metric) VALUES (?, ?, ?, ?)
-    ON CONFLICT(name) DO UPDATE SET muscle = excluded.muscle, secondary = excluded.secondary, metric = excluded.metric
+    INSERT INTO exercises (name, muscle, secondary, metric, kind) VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(name) DO UPDATE SET muscle = excluded.muscle, secondary = excluded.secondary, metric = excluded.metric, kind = excluded.kind
     WHERE custom = 0
   `);
-  for (const [name, muscle, secondary, metric = 'weight'] of EXERCISE_LIBRARY) {
-    seed.run(name, muscle, JSON.stringify(secondary), metric);
+  for (const [name, muscle, secondary, metric = 'weight', kind = 'strength'] of EXERCISE_LIBRARY) {
+    seed.run(name, muscle, JSON.stringify(secondary), metric, kind);
   }
 
   const getExerciseStmt = db.prepare('SELECT * FROM exercises WHERE id = ?');
@@ -108,8 +114,8 @@ export function openDb(path: string) {
 
     addExercise(input: NewExercise): Exercise {
       const { lastInsertRowid } = db
-        .prepare('INSERT INTO exercises (name, muscle, secondary, metric, custom) VALUES (?, ?, ?, ?, 1)')
-        .run(input.name, input.muscle, JSON.stringify(input.secondary ?? []), input.metric ?? 'weight');
+        .prepare('INSERT INTO exercises (name, muscle, secondary, metric, kind, custom) VALUES (?, ?, ?, ?, ?, 1)')
+        .run(input.name, input.muscle, JSON.stringify(input.secondary ?? []), input.metric ?? 'weight', input.kind ?? 'strength');
       return getExercise(Number(lastInsertRowid))!;
     },
 

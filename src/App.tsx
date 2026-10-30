@@ -4,6 +4,8 @@ import { Drawer, ROUTES, type Route } from './components/Drawer.tsx';
 import { Icon } from './components/Icon.tsx';
 import { FootballSheet } from './components/FootballSheet.tsx';
 import { HistorySheet } from './components/HistorySheet.tsx';
+import { InjurySheet } from './components/InjurySheet.tsx';
+import { KindSheet } from './components/KindSheet.tsx';
 import { MuscleSheet } from './components/MuscleSheet.tsx';
 import { RoutineEditor } from './components/RoutineEditor.tsx';
 import { PlanSheet } from './components/PlanSheet.tsx';
@@ -15,6 +17,7 @@ import { DataProvider, UiCtx, type SheetState, type ToastAction } from './data.t
 import { dateKey } from './lib/stats.ts';
 import { store, type SyncStatus } from './lib/store.ts';
 import { BodyPage } from './pages/BodyPage.tsx';
+import { InjuriesPage } from './pages/InjuriesPage.tsx';
 import { PROGRESS_TABS, ProgressPage, type ProgressTab } from './pages/ProgressPage.tsx';
 import { QuickSheet } from './components/QuickSheet.tsx';
 import { RoutinesPage } from './pages/RoutinesPage.tsx';
@@ -102,6 +105,8 @@ export function App() {
       openSoreness: () => setSheet({ type: 'soreness' }),
       openHistory: (exerciseId: number) => setSheet({ type: 'history', exerciseId }),
       openRoutine: (routineId?: string) => setSheet({ type: 'routine', routineId }),
+      openInjury: (injuryId?: string) => setSheet({ type: 'injury', injuryId }),
+      openKind: (kind: 'plyometric' | 'mobility') => setSheet({ type: 'kind', kind }),
       openQuick: () => setSheet({ type: 'quick' }),
       notify: (message: string, tone: Toast['tone'] = 'default', action?: ToastAction) => setToast({ id: Date.now(), message, tone, action }),
     }),
@@ -123,7 +128,7 @@ export function App() {
         <div className="topbar-end">
           <SyncBadge status={status} pending={pending} />
           {state && !inWorkout && (
-            <button className="add-btn" onClick={ui.openQuick} aria-label="Log a workout, football or soreness">
+            <button className="add-btn" onClick={ui.openQuick} aria-label="Log a workout, football, mobility or an injury">
               <Icon name="plus" size={20} />
             </button>
           )}
@@ -148,6 +153,7 @@ export function App() {
             {route === 'tracker' && <TrackerPage />}
             {route === 'routines' && <RoutinesPage />}
             {route === 'progress' && <ProgressPage tab={tab} />}
+            {route === 'injuries' && <InjuriesPage />}
             {route === 'settings' && <SettingsPage />}
             {sheet?.type === 'muscle' && (
               <MuscleSheet key={`${sheet.muscle}-${sheet.exerciseId}`} muscle={sheet.muscle} exerciseId={sheet.exerciseId} onClose={closeSheet} />
@@ -158,6 +164,8 @@ export function App() {
             {sheet?.type === 'routine' && <RoutineEditor key={sheet.routineId ?? 'new'} routineId={sheet.routineId} onClose={closeSheet} />}
             {sheet?.type === 'history' && <HistorySheet key={sheet.exerciseId} exerciseId={sheet.exerciseId} onClose={closeSheet} />}
             {sheet?.type === 'soreness' && <SorenessSheet onClose={closeSheet} />}
+            {sheet?.type === 'injury' && <InjurySheet key={sheet.injuryId ?? 'new'} injuryId={sheet.injuryId} onClose={closeSheet} />}
+            {sheet?.type === 'kind' && <KindSheet key={sheet.kind} kind={sheet.kind} onClose={closeSheet} />}
             {sheet?.type === 'summary' && <SummarySheet sessionId={sheet.sessionId} onClose={closeSheet} />}
             <SessionBar />
             </SessionProvider>

@@ -16,11 +16,20 @@ import { maxRepsAt, wathen1RM } from './strength.ts';
  *   (Hody et al., 2019, Front Physiol 10:536) and for unaccustomed work; the
  *   repeated-bout effect protects muscles that trained the movement recently
  *   (McHugh, 2003, Scand J Med Sci Sports 13:88–97).
+ * - Plyometrics aren't taken near failure, so they're dosed by ground contacts
+ *   weighted by intensity (low: pogos; medium: jumps; high: depth jumps, bounds,
+ *   single-leg hops), the way NSCA guidance prescribes them: ~80–140 contacts
+ *   is a full session (Potach & Chu, Essentials of Strength Training and
+ *   Conditioning, 4th ed., NSCA, 2016). They add fatigue but no hard sets.
+ * - Mobility, stretching and low-load activation work cause no meaningful
+ *   fatigue, so they're logged without any.
  */
 
 export interface SetEffort {
-  /** Estimated reps left in the tank (0 = failure). */
-  rir: number;
+  /** Estimated reps left in the tank (0 = failure); null when it doesn't apply (plyometrics, mobility). */
+  rir: number | null;
+  /** Estimated effort on the CR-10 scale, for session load. */
+  rpe: number;
   /** Hard-set credit, 0–1, for weekly volume. */
   hard: number;
   /** Fatigue cost in hard-set equivalents (≈1 for a set to failure). */
@@ -40,6 +49,9 @@ const REFERENCE: Record<string, number> = {
   Plank: 90,
   'Side Plank': 60,
   "Farmer's Carry": 60,
+  'Copenhagen Adduction': 10,
+  'Copenhagen Plank': 30,
+  'Lateral Band Walk': 20,
 };
 const DEFAULT_REFERENCE = { bodyweight: 15, time: 60 };
 
@@ -70,6 +82,24 @@ const DAMAGE: Record<string, number> = {
   'Overhead Triceps Extension': 1.1,
   'Incline Dumbbell Curl': 1.1,
 };
+/** Intensity per ground contact; a full session (~100 medium contacts) ≈ two hard sets to failure. */
+const PLYO_INTENSITY: Record<string, number> = {
+  'Pogo Hops': 0.5,
+  'Squat Jump': 0.7,
+  'Box Jump': 0.7,
+  'Plyo Push-Up': 0.8,
+  'Medicine Ball Slam': 0.6,
+  'Medicine Ball Rotational Throw': 0.6,
+  'Tuck Jump': 1.2,
+  'Hurdle Hop': 1.2,
+  'Single-Leg Hop': 1.5,
+  Bounding: 1.5,
+  'Depth Jump': 1.5,
+};
+const PLYO_FATIGUE_PER_CONTACT = 1 / 50;
+const PLYO_RPE = 6;
+const MOBILITY_RPE = 2;
+
 /** No exposure to the exercise in this long → unaccustomed, no repeated-bout protection. */
 const NOVELTY_DAYS = 21;
 const NOVELTY_FACTOR = 1.3;
@@ -97,6 +127,19 @@ export function setEfforts(entries: Entry[], exById: Map<number, Exercise>): Map
     lastDone.set(ex.id, at);
     const damage = DAMAGE[ex.name] ?? 1;
 
+    if (ex.kind === 'mobility') {
+      out.set(e.id, e.sets.map(() => ({ rir: null, rpe: MOBILITY_RPE, hard: 0, fatigue: 0 })));
+      continue;
+    }
+    if (ex.kind === 'plyometric') {
+      const intensity = PLYO_INTENSITY[ex.name] ?? 1;
+      out.set(
+        e.id,
+        e.sets.map((s) => ({ rir: null, rpe: PLYO_RPE, hard: 0, fatigue: s.reps * intensity * PLYO_FATIGUE_PER_CONTACT * novelty })),
+      );
+      continue;
+    }
+
     let rirs: number[];
     if (ex.metric === 'time') {
       const held = e.sets.map((s) => (s.seconds ?? 0) * (1 + s.weight / BODYWEIGHT_SHARE_KG));
@@ -118,7 +161,12 @@ export function setEfforts(entries: Entry[], exById: Map<number, Exercise>): Map
 
     out.set(
       e.id,
-      rirs.map((rir) => ({ rir: round1(rir), hard: hardCredit(rir), fatigue: fatigueCost(rir) * damage * novelty })),
+      rirs.map((rir) => ({
+        rir: round1(rir),
+        rpe: Math.min(10, Math.max(3, 10 - rir)),
+        hard: hardCredit(rir),
+        fatigue: fatigueCost(rir) * damage * novelty,
+      })),
     );
   }
   return out;

@@ -1,7 +1,8 @@
 import { MUSCLES, MUSCLE_BY_ID, type MuscleCategory, type MuscleId } from '../../shared/muscles.ts';
-import type { Activity, Entry, Exercise, ExerciseMetric, Settings, Soreness, SorenessLevel, WorkoutSet } from '../../shared/types.ts';
+import type { Activity, Entry, Exercise, ExerciseKind, ExerciseMetric, Injury, Settings, Soreness, SorenessLevel, WorkoutSet } from '../../shared/types.ts';
 import { dateKey } from './dates.ts';
 import { activityLoad, FOOTBALL_MUSCLES, footballContext } from './football.ts';
+import { injuredMuscles, preventionDue, type ProtocolStatus } from './injuries.ts';
 import type { SetEffort } from './strain.ts';
 import { wathen1RM } from './strength.ts';
 
@@ -83,12 +84,14 @@ export function bestSet(sets: WorkoutSet[], metric: ExerciseMetric): WorkoutSet 
   return sets.reduce((best, s) => (beats(s, best, metric) ? s : best));
 }
 
-/** Current PB per exercise, plus the ids of every entry that set a new PB when it was logged. */
+/** Current PB per strength exercise, plus the ids of every entry that set a new PB when it was logged. */
 export function personalBests(entries: Entry[], exById: Map<number, Exercise>) {
   const best = new Map<number, PersonalBest>();
   const prEntryIds = new Set<string>();
   for (const e of [...entries].sort((a, b) => a.performedAt.localeCompare(b.performedAt))) {
-    const metric = exById.get(e.exerciseId)?.metric ?? 'weight';
+    const ex = exById.get(e.exerciseId);
+    if (ex && ex.kind !== 'strength') continue;
+    const metric = ex?.metric ?? 'weight';
     const top = bestSet(e.sets, metric);
     const current = best.get(e.exerciseId);
     if (!current || beats(top, current, metric)) {
@@ -322,7 +325,11 @@ export interface Recommendation {
   football: { label: string; note: string } | null;
   muscles: MuscleId[];
   recovering: MuscleId[];
+  /** Muscles left out because of an ongoing injury. */
+  injured: MuscleId[];
   exercises: Exercise[];
+  /** Injury-prevention work still due this week that suits today. */
+  prevention: ProtocolStatus[];
 }
 
 export interface RecommendInput {
@@ -332,29 +339,35 @@ export interface RecommendInput {
   exById: Map<number, Exercise>;
   fatigue: Map<MuscleId, MuscleFatigue>;
   settings: Settings;
+  injuries: Injury[];
+  prevention: ProtocolStatus[];
   now: Date;
 }
 
+/** Last direct training per muscle; stretching and mobility work don't count. */
 function lastTrained(entries: Entry[], exById: Map<number, Exercise>) {
   const last = new Map<MuscleId, number>();
   for (const e of entries) {
-    const m = exById.get(e.exerciseId)?.muscle;
-    if (m) last.set(m, Math.max(last.get(m) ?? 0, Date.parse(e.performedAt)));
+    const ex = exById.get(e.exerciseId);
+    if (ex && ex.kind !== 'mobility') last.set(ex.muscle, Math.max(last.get(ex.muscle) ?? 0, Date.parse(e.performedAt)));
   }
   return last;
 }
 
-/** Most-used exercises for a muscle first, falling back to library order. */
-export function exercisesFor(muscle: MuscleId, exercises: Exercise[], entries: Entry[]) {
+/** Most-used first, falling back to library order. */
+export function byUse(exercises: Exercise[], entries: Entry[]) {
   const uses = new Map<number, number>();
   for (const e of entries) uses.set(e.exerciseId, (uses.get(e.exerciseId) ?? 0) + 1);
-  return exercises
-    .filter((ex) => ex.muscle === muscle)
-    .sort((a, b) => (uses.get(b.id) ?? 0) - (uses.get(a.id) ?? 0) || a.id - b.id);
+  return [...exercises].sort((a, b) => (uses.get(b.id) ?? 0) - (uses.get(a.id) ?? 0) || a.id - b.id);
+}
+
+/** Exercises of one kind for a muscle, most-used first. */
+export function exercisesFor(muscle: MuscleId, exercises: Exercise[], entries: Entry[], kind: ExerciseKind = 'strength') {
+  return byUse(exercises.filter((ex) => ex.muscle === muscle && ex.kind === kind), entries);
 }
 
 /** The category that has gone longest without training, among those allowed. */
-function mostRested(entries: Entry[], exById: Map<number, Exercise>, now: Date, cats: MuscleCategory[]) {
+function mostRested(entries: Entry[], exById: Map<number, Exercise>, now: Date, cats: MuscleCategory[], skip: Set<MuscleId>) {
   const last = lastTrained(entries, exById);
   const rest = (m: MuscleId) => now.getTime() - (last.get(m) ?? 0);
   const avgRest = (c: MuscleCategory) => {
@@ -362,23 +375,25 @@ function mostRested(entries: Entry[], exById: Map<number, Exercise>, now: Date, 
     return ms.reduce((sum, m) => sum + Math.min(rest(m.id), 30 * DAY), 0) / ms.length;
   };
   const cat = [...cats].sort((a, b) => avgRest(b) - avgRest(a))[0];
-  const muscles = MUSCLES.filter((m) => m.category === cat)
+  const muscles = MUSCLES.filter((m) => m.category === cat && !skip.has(m.id))
     .sort((a, b) => rest(b.id) - rest(a.id))
     .slice(0, 4)
     .map((m) => m.id);
   return { cat, muscles };
 }
 
-export function recommend({ entries, activities, exercises, exById, fatigue, settings, now }: RecommendInput): Recommendation {
+export function recommend({ entries, activities, exercises, exById, fatigue, settings, injuries, prevention, now }: RecommendInput): Recommendation {
   const weekday = WEEKDAYS[now.getDay()];
   const habit = weekdayHabits(entries, exById, now, activities)[now.getDay()];
   const totalDays = new Set(entries.map((e) => dateKey(e.performedAt))).size;
   const ctx = footballContext(now, settings, activities);
   const football = ctx.label && ctx.note ? { label: ctx.label, note: ctx.note } : null;
   const isLegs = (m: MuscleId) => MUSCLE_BY_ID[m].category === 'legs';
+  const hurt = injuredMuscles(injuries);
+  const injured = [...hurt];
 
   if (ctx.restDay) {
-    return { weekday, headline: 'Match day ⚽', detail: 'No lifting today — good luck out there.', football, muscles: [], recovering: [], exercises: [] };
+    return { weekday, headline: 'Match day ⚽', detail: 'No lifting today — good luck out there.', football, muscles: [], recovering: [], injured, exercises: [], prevention: [] };
   }
 
   let headline: string;
@@ -392,7 +407,7 @@ export function recommend({ entries, activities, exercises, exById, fatigue, set
   } else {
     // No pattern for today: pick the category that has been resting longest.
     const cats: MuscleCategory[] = ctx.avoidLegs ? ['push', 'pull'] : ctx.legsWindow ? ['legs'] : ['legs', 'push', 'pull'];
-    const pick = mostRested(entries, exById, now, cats);
+    const pick = mostRested(entries, exById, now, cats, hurt);
     targets = pick.muscles;
     headline = `How about a ${CATEGORY_LABEL[pick.cat].toLowerCase()} day?`;
     detail =
@@ -404,14 +419,16 @@ export function recommend({ entries, activities, exercises, exById, fatigue, set
   if (ctx.avoidLegs && targets.some(isLegs)) {
     targets = targets.filter((m) => !isLegs(m));
     if (targets.length === 0) {
-      const pick = mostRested(entries, exById, now, ['push', 'pull']);
+      const pick = mostRested(entries, exById, now, ['push', 'pull'], hurt);
       targets = pick.muscles;
       headline = `Swap legs for ${CATEGORY_LABEL[pick.cat].toLowerCase()} today`;
     }
   }
 
+  targets = targets.filter((m) => !hurt.has(m));
   const muscles = targets.filter((m) => isRecovered(fatigue.get(m)));
   const recovering = targets.filter((m) => !isRecovered(fatigue.get(m)));
-  const suggested = muscles.slice(0, 4).flatMap((m) => exercisesFor(m, exercises, entries).slice(0, 2));
-  return { weekday, headline, detail, football, muscles, recovering, exercises: suggested };
+  const safe = (ex: Exercise) => !hurt.has(ex.muscle) && !ex.secondary.some((m) => hurt.has(m));
+  const suggested = muscles.slice(0, 4).flatMap((m) => exercisesFor(m, exercises, entries).filter(safe).slice(0, 2));
+  return { weekday, headline, detail, football, muscles, recovering, injured, exercises: suggested, prevention: preventionDue(prevention, ctx) };
 }

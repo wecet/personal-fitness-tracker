@@ -195,16 +195,19 @@ function DayDetail({ dayKey, log }: { dayKey: string; log: DayLog | undefined })
                     <strong>{ex?.name ?? 'Unknown exercise'}</strong>
                     {prEntryIds.has(e.id) && <span className="pb-badge small">PB</span>}
                     <div className="set-list">
-                      {e.sets.map((s, i) => (
-                        <span key={i}>
-                          {formatSet(s, ex?.metric ?? 'weight')}
-                          {efforts.get(e.id)?.[i] && (
-                            <span className="rir" title="Estimated reps in reserve">
-                              {' '}· {efforts.get(e.id)![i].rir < 0.5 ? 'to failure' : `~${Math.round(efforts.get(e.id)![i].rir)} RIR`}
-                            </span>
-                          )}
-                        </span>
-                      ))}
+                      {e.sets.map((s, i) => {
+                        const rir = efforts.get(e.id)?.[i]?.rir;
+                        return (
+                          <span key={i}>
+                            {formatSet(s, ex?.metric ?? 'weight')}
+                            {rir != null && (
+                              <span className="rir" title="Estimated reps in reserve">
+                                {' '}· {rir < 0.5 ? 'to failure' : `~${Math.round(rir)} RIR`}
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
                   <button className="icon-btn small" onClick={() => confirmDelete(e)} aria-label="Delete entry"><Icon name="trash" size={16} /></button>

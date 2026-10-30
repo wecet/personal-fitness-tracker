@@ -3,6 +3,7 @@ import { MUSCLES, type MuscleId } from '../../shared/muscles.ts';
 import { BodyMap, type OverlayTone, type Side } from '../components/BodyMap.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { useData, useUi } from '../data.tsx';
+import { injuredSides, injuryLabel, isActive } from '../lib/injuries.ts';
 import { daysSinceTrained, weeklySets } from '../lib/stats.ts';
 
 type Mode = 'recovery' | 'volume' | 'neglected';
@@ -41,13 +42,15 @@ const names = (ids: MuscleId[]) => {
 };
 
 export function BodyPage() {
-  const { fatigue, rec, entries, exById, now, load, efforts } = useData();
+  const { fatigue, rec, entries, exById, now, load, efforts, injuries } = useData();
   const { openMuscle, openPlan } = useUi();
   const [mode, setMode] = useMode();
   const [side, setSide] = useState<Side>('front');
 
   const volume = useMemo(() => weeklySets(entries, exById, now, efforts), [entries, exById, now, efforts]);
   const since = useMemo(() => daysSinceTrained(entries, exById, now), [entries, exById, now]);
+  const injured = useMemo(() => injuredSides(injuries), [injuries]);
+  const activeInjuries = injuries.filter(isActive);
 
   const overlay = useMemo(() => {
     const out = new Map<MuscleId, number>();
@@ -84,7 +87,7 @@ export function BodyPage() {
         <Icon name="chevron" size={16} />
       </button>
 
-      <BodyMap overlay={overlay} tone={MODES.find((m) => m.id === mode)!.tone} suggested={mode === 'recovery' ? rec.muscles : []}
+      <BodyMap overlay={overlay} tone={MODES.find((m) => m.id === mode)!.tone} suggested={mode === 'recovery' ? rec.muscles : []} injured={injured}
         onSelect={(m) => openMuscle(m)} side={side} onSideChange={setSide} />
 
       <div className="home-controls">
@@ -100,6 +103,12 @@ export function BodyPage() {
         </button>
       </div>
       <p className="home-caption">{caption}</p>
+      {activeInjuries.length > 0 && (
+        <a className="home-injury" href="#/injuries">
+          <span className="injury-swatch" aria-hidden="true" />
+          {activeInjuries.map(injuryLabel).join(', ')} — injured
+        </a>
+      )}
 
     </div>
   );

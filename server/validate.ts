@@ -1,4 +1,4 @@
-import { EXERCISE_METRICS, FOOTBALL_TYPES, type Exercise, type ExerciseMetric, type NewExercise, type RecordKind, type RecordMap, type WorkoutSet } from '../shared/types.ts';
+import { EXERCISE_KINDS, EXERCISE_METRICS, FOOTBALL_TYPES, INJURY_CONTEXTS, JOINT_AREAS, type Exercise, type ExerciseMetric, type Injury, type NewExercise, type RecordKind, type RecordMap, type WorkoutSet } from '../shared/types.ts';
 import { isMuscleId } from '../shared/muscles.ts';
 
 export class ValidationError extends Error {}
@@ -23,6 +23,10 @@ function isoDate(value: unknown, name: string): string {
 function int(value: unknown, name: string, min: number, max: number): number {
   const n = Number(value);
   return Number.isInteger(n) && n >= min && n <= max ? n : fail(`${name} must be a whole number from ${min} to ${max}`);
+}
+
+function localDate(value: unknown, name: string): string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : fail(`${name} must be YYYY-MM-DD`);
 }
 
 function weekdays(value: unknown): number[] {
@@ -59,7 +63,8 @@ export function newExercise(raw: unknown): NewExercise {
   if (!isMuscleId(body.muscle)) return fail('Unknown muscle');
   const secondary = Array.isArray(body.secondary) ? body.secondary.filter(isMuscleId) : [];
   const metric = EXERCISE_METRICS.find((m) => m === body.metric) ?? 'weight';
-  return { name, muscle: body.muscle, secondary, metric };
+  const kind = EXERCISE_KINDS.find((k) => k === body.kind) ?? 'strength';
+  return { name, muscle: body.muscle, secondary, metric, kind };
 }
 
 export type Validators = { [K in RecordKind]: (raw: unknown) => RecordMap[K] };
@@ -91,10 +96,26 @@ export function makeValidators(getExercise: (id: number) => Exercise | undefined
     },
     bodyweight(raw) {
       const r = object(raw);
-      const date = typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : fail('date must be YYYY-MM-DD');
+      const date = localDate(r.date, 'date');
       const kg = Number(r.kg);
       if (!Number.isFinite(kg) || kg < 20 || kg > 400) fail('kg must be 20–400');
       return { id: recordId(r.id), date, kg: Math.round(kg * 10) / 10 };
+    },
+    injury(raw) {
+      const r = object(raw);
+      const area = isMuscleId(r.area) || JOINT_AREAS.some((a) => a === r.area) ? (r.area as Injury['area']) : fail('Unknown injury area');
+      const startedAt = localDate(r.startedAt, 'startedAt');
+      const resolvedAt = r.resolvedAt == null ? null : localDate(r.resolvedAt, 'resolvedAt');
+      if (resolvedAt && resolvedAt < startedAt) fail('An injury can’t resolve before it started');
+      return {
+        id: recordId(r.id),
+        area,
+        side: r.side === 'left' || r.side === 'right' || r.side === 'both' ? r.side : null,
+        startedAt,
+        resolvedAt,
+        context: INJURY_CONTEXTS.find((c) => c === r.context) ?? 'other',
+        note: note(r.note),
+      };
     },
     routine(raw) {
       const r = object(raw);
