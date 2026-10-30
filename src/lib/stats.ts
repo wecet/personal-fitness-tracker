@@ -382,15 +382,24 @@ function mostRested(entries: Entry[], exById: Map<number, Exercise>, now: Date, 
   return { cat, muscles };
 }
 
+/**
+ * Around football, "legs" means anything that loads them: leg muscles, the lower
+ * back (hip hinges), and exercises with a leg muscle as a secondary mover, like
+ * deadlifts and good mornings, which tax the hamstrings heavily.
+ */
+const isLegs = (m: MuscleId) => MUSCLE_BY_ID[m].category === 'legs' || m === 'lowerBack';
+const HIP_HINGE_MOVERS = new Set<MuscleId>(['hamstrings', 'glutes', 'quads', 'calves']);
+const loadsLegs = (ex: Exercise) => isLegs(ex.muscle) || ex.secondary.some((m) => HIP_HINGE_MOVERS.has(m));
+
 export function recommend({ entries, activities, exercises, exById, fatigue, settings, injuries, prevention, now }: RecommendInput): Recommendation {
   const weekday = WEEKDAYS[now.getDay()];
   const habit = weekdayHabits(entries, exById, now, activities)[now.getDay()];
   const totalDays = new Set(entries.map((e) => dateKey(e.performedAt))).size;
   const ctx = footballContext(now, settings, activities);
   const football = ctx.label && ctx.note ? { label: ctx.label, note: ctx.note } : null;
-  const isLegs = (m: MuscleId) => MUSCLE_BY_ID[m].category === 'legs';
   const hurt = injuredMuscles(injuries);
   const injured = [...hurt];
+  const skip = ctx.avoidLegs ? new Set<MuscleId>([...hurt, 'lowerBack']) : hurt;
 
   if (ctx.restDay) {
     return { weekday, headline: 'Match day ⚽', detail: 'No lifting today — good luck out there.', football, muscles: [], recovering: [], injured, exercises: [], prevention: [] };
@@ -407,7 +416,7 @@ export function recommend({ entries, activities, exercises, exById, fatigue, set
   } else {
     // No pattern for today: pick the category that has been resting longest.
     const cats: MuscleCategory[] = ctx.avoidLegs ? ['push', 'pull'] : ctx.legsWindow ? ['legs'] : ['legs', 'push', 'pull'];
-    const pick = mostRested(entries, exById, now, cats, hurt);
+    const pick = mostRested(entries, exById, now, cats, skip);
     targets = pick.muscles;
     headline = `How about a ${CATEGORY_LABEL[pick.cat].toLowerCase()} day?`;
     detail =
@@ -419,7 +428,7 @@ export function recommend({ entries, activities, exercises, exById, fatigue, set
   if (ctx.avoidLegs && targets.some(isLegs)) {
     targets = targets.filter((m) => !isLegs(m));
     if (targets.length === 0) {
-      const pick = mostRested(entries, exById, now, ['push', 'pull'], hurt);
+      const pick = mostRested(entries, exById, now, ['push', 'pull'], skip);
       targets = pick.muscles;
       headline = `Swap legs for ${CATEGORY_LABEL[pick.cat].toLowerCase()} today`;
     }
@@ -428,7 +437,8 @@ export function recommend({ entries, activities, exercises, exById, fatigue, set
   targets = targets.filter((m) => !hurt.has(m));
   const muscles = targets.filter((m) => isRecovered(fatigue.get(m)));
   const recovering = targets.filter((m) => !isRecovered(fatigue.get(m)));
-  const safe = (ex: Exercise) => !hurt.has(ex.muscle) && !ex.secondary.some((m) => hurt.has(m));
+  const safe = (ex: Exercise) =>
+    !hurt.has(ex.muscle) && !ex.secondary.some((m) => hurt.has(m)) && !(ctx.avoidLegs && loadsLegs(ex));
   const suggested = muscles.slice(0, 4).flatMap((m) => exercisesFor(m, exercises, entries).filter(safe).slice(0, 2));
   return { weekday, headline, detail, football, muscles, recovering, injured, exercises: suggested, prevention: preventionDue(prevention, ctx) };
 }
