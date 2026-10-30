@@ -73,7 +73,7 @@ function Figure({ side, overlay, tone, suggested, injured, hover, onHover, onSel
           <stop offset="0" stopColor="#fff" stopOpacity="0.08" />
           <stop offset="1" stopColor="#fff" stopOpacity="0" />
         </radialGradient>
-        {/* Ember heat: hot core, deep red edges. */}
+        {/* Heat: hot core, deep red edges. */}
         <radialGradient id={id('heat')} cx="0.4" cy="0.35" r="0.8">
           <stop offset="0" stopColor="#ffb46b" />
           <stop offset="0.45" stopColor="#ff5634" />

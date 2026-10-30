@@ -2,7 +2,7 @@ const TOPICS: { title: string; body: string; sources: string[] }[] = [
   {
     title: 'How hard each set was',
     body:
-      'There’s no effort input. Ember estimates your one-rep max from your best sets (Wathen equation) and works out how many more reps the weight allowed — your reps in reserve (RIR). A new best is assumed to be ~2 reps short of failure, as is typical. Sets within about 4 reps of failure count as hard sets.',
+      'There’s no effort input. Tempo estimates your one-rep max from your best sets (Wathen equation) and works out how many more reps the weight allowed — your reps in reserve (RIR). A new best is assumed to be ~2 reps short of failure, as is typical. Sets within about 4 reps of failure count as hard sets.',
     sources: [
       'Wathen D (1994). Load assignment. In: Essentials of Strength Training and Conditioning. NSCA.',
       'LeSuer DA et al. (1997). Accuracy of prediction equations for estimating 1-RM. J Strength Cond Res 11(4):211–213.',
