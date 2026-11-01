@@ -74,14 +74,22 @@ const TOPICS: { title: string; body: string; sources: string[] }[] = [
   {
     title: 'Injury log',
     body:
-      'Injured areas are outlined on the body map and kept out of your plan, along with exercises that use them. Severity follows the football injury consensus, based on days until you’re back to full training: minimal (1–3), mild (4–7), moderate (8–28), severe (over 28).',
-    sources: ['Fuller CW et al. (2006). Consensus statement on injury definitions and data collection procedures in football. Br J Sports Med 40:193–201.'],
+      'Injured areas are outlined on the body map and kept out of your plan, along with exercises that use them. Return to play is a checklist of criteria cleared in order, not a date: pain-free day to day, full range of motion, loaded strength, then running, sprinting and cutting, and full training (upper-body injuries swap the running stages for heavier lifting). Until loaded strength is cleared, progression suggestions for that muscle are paused. Severity follows the football injury consensus, based on days until you’re back to full training: minimal (1–3), mild (4–7), moderate (8–28), severe (over 28).',
+    sources: [
+      'Fuller CW et al. (2006). Consensus statement on injury definitions and data collection procedures in football. Br J Sports Med 40:193–201.',
+      'Ardern CL et al. (2016). 2016 Consensus statement on return to sport from the First World Congress in Sports Physical Therapy, Bern. Br J Sports Med 50:853–864.',
+      'Buckthorpe M et al. (2019). Recommendations for hamstring injury prevention in elite football: translating research into practice. Br J Sports Med 53:449–456.',
+    ],
   },
   {
     title: 'Progression suggestions',
     body:
-      'Add weight once you hit the top of the rep range on every set two sessions in a row (+~2.5% upper body, +~5% lower body); otherwise add a rep.',
-    sources: ['ACSM (2009). Progression models in resistance training for healthy adults. Med Sci Sports Exerc 41(3):687–708.'],
+      'Add weight once you hit the top of the rep range on every set two sessions in a row (+~2.5% upper body, +~5% lower body); otherwise add a rep. If the workout felt easy (effort 6/10 or less), one session at the top of the range is enough. After more than three weeks off, start at about 90% (80% after six), since strength fades after a few weeks of detraining. Three sessions at one weight without improving suggests dropping ~10% and building back up.',
+    sources: [
+      'ACSM (2009). Progression models in resistance training for healthy adults. Med Sci Sports Exerc 41(3):687–708.',
+      'Bosquet L et al. (2013). Effect of training cessation on muscular performance: a meta-analysis. Scand J Med Sci Sports 23(3):e140–e149.',
+      'Helms ER et al. (2018). RPE vs. percentage 1RM loading in periodized programs matched for sets and repetitions. Front Physiol 9:247.',
+    ],
   },
 ];
 
