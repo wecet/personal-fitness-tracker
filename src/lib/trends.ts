@@ -1,4 +1,4 @@
-import type { Entry, Exercise } from '../../shared/types.ts';
+import type { Entry, Exercise, WorkoutSet } from '../../shared/types.ts';
 import { bestSet, estimate1RM, formatDuration, formatKg } from './stats.ts';
 
 const DAY = 86_400_000;
@@ -32,6 +32,72 @@ export function progressSeries(ex: Exercise, history: Entry[]): { points: Point[
     label: latest?.label ?? 'Best',
     unit: latest?.unit ?? 'kg',
   };
+}
+
+// ---------- the progress chart ----------
+
+/**
+ * What the progress chart can show. Weighted lifts default to the heaviest
+ * weight actually lifted, with estimated 1RM as the alternative for comparing
+ * across rep ranges; bodyweight work shows the best set or total reps; holds
+ * show the longest hold.
+ */
+export type ChartView = 'top' | '1rm' | 'best' | 'total' | 'hold';
+
+export const VIEW_LABEL: Record<ChartView, string> = {
+  top: 'Top set',
+  '1rm': 'Est. 1RM',
+  best: 'Best set',
+  total: 'Total reps',
+  hold: 'Longest hold',
+};
+
+export function chartViews(ex: Exercise): ChartView[] {
+  if (ex.metric === 'time') return ['hold'];
+  if (ex.metric === 'bodyweight') return ['best', 'total'];
+  return ['top', '1rm'];
+}
+
+export interface ViewSeries {
+  points: Point[];
+  unit: MeasureUnit;
+  /** For bodyweight work: whether the values are added kg. */
+  added: boolean;
+}
+
+/** The heaviest set of a session: top weight, and the most reps done at it. */
+export function topSet(sets: WorkoutSet[]): WorkoutSet {
+  const weight = Math.max(...sets.map((s) => s.weight));
+  return { weight, reps: Math.max(...sets.filter((s) => s.weight === weight).map((s) => s.reps)) };
+}
+
+/** One point per session for the chosen view, oldest first. */
+export function viewSeries(ex: Exercise, history: Entry[], view: ChartView): ViewSeries {
+  const point = (entry: Entry, y: number): Point => ({ at: Date.parse(entry.performedAt), y, entry });
+  switch (view) {
+    case 'hold':
+      return { points: history.map((e) => point(e, Math.max(...e.sets.map((s) => s.seconds ?? 0)))), unit: 'seconds', added: false };
+    case 'total':
+      return { points: history.map((e) => point(e, e.sets.reduce((n, s) => n + s.reps, 0))), unit: 'reps', added: false };
+    case '1rm': {
+      const { points, unit } = progressSeries(ex, history);
+      return { points, unit, added: false };
+    }
+    default: {
+      // Once bodyweight work carries added weight, chart that; earlier unloaded sessions measure something else.
+      const loaded = view === 'top' || history.at(-1)?.sets.some((s) => s.weight > 0) === true;
+      if (!loaded) return { points: history.map((e) => point(e, Math.max(...e.sets.map((s) => s.reps)))), unit: 'reps', added: false };
+      const sessions = history.filter((e) => e.sets.some((s) => s.weight > 0));
+      return { points: sessions.map((e) => point(e, topSet(e.sets).weight)), unit: 'kg', added: ex.metric === 'bodyweight' };
+    }
+  }
+}
+
+/** Best-so-far over time: a step each time a session beats every one before it. */
+export function bestSoFar(points: Point[]): { at: number; y: number }[] {
+  const out: { at: number; y: number }[] = [];
+  for (const p of points) if (!out.length || p.y > out.at(-1)!.y) out.push({ at: p.at, y: p.y });
+  return out;
 }
 
 export interface Trend {

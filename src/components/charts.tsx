@@ -77,6 +77,7 @@ export function LineChart({
   zeroBased = false,
   area: showArea = true,
   extra,
+  best,
 }: {
   points: LinePoint[];
   label: string;
@@ -91,6 +92,12 @@ export function LineChart({
   area?: boolean;
   /** Extra tooltip line per point. */
   extra?: (p: LinePoint) => string | null;
+  /**
+   * Staircase mode: each point is a session dot (no connecting line) and this
+   * best-so-far series is drawn as a step line through them, carried flat to
+   * the last session.
+   */
+  best?: { points: { x: number; y: number }[]; label: string; pointLabel: string; markLabel: string };
 }) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [active, setActive] = useState<number | null>(null);
@@ -107,6 +114,11 @@ export function LineChart({
   const line = points.map((p, i) => `${i ? 'L' : 'M'}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join('');
   const area = `${line}L${sx(x1)},${sy(y0)}L${sx(x0)},${sy(y0)}Z`;
   const last = points[points.length - 1];
+  // Step-after path: flat until the next best, then straight up.
+  const stairs = best?.points.length
+    ? best.points.map((p, i) => `${i ? `H${sx(p.x).toFixed(1)}V` : `M${sx(p.x).toFixed(1)},`}${sy(p.y).toFixed(1)}`).join('') + `H${sx(x1).toFixed(1)}`
+    : null;
+  const top = best?.points.at(-1);
   const xTicks = points.length > 1 ? [0, 0.5, 1].map((f) => x0 + (x1 - x0) * f) : [x0];
 
   const nearest = (clientX: number, el: Element) => {
@@ -126,6 +138,13 @@ export function LineChart({
       {band && (
         <div className="chart-legend">
           <span><i className="band-swatch" />{band.label}</span>
+        </div>
+      )}
+      {best && (
+        <div className="chart-legend">
+          <span><i className="dot-swatch" />{best.pointLabel}</span>
+          <span><i className="dot-swatch" style={{ background: color }} />{best.markLabel}</span>
+          <span><i className="line-swatch" style={{ background: color }} />{best.label}</span>
         </div>
       )}
       <svg
@@ -153,15 +172,27 @@ export function LineChart({
             {formatX(x)}
           </text>
         ))}
-        {showArea && <path d={area} fill={color} opacity={0.1} />}
-        <path d={line} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-        {points.map((p, i) => p.mark && <circle key={i} cx={sx(p.x)} cy={sy(p.y)} r={4} fill={color} className="chart-dot" />)}
-        <circle cx={sx(last.x)} cy={sy(last.y)} r={4} fill={color} className="chart-dot" />
-        <text x={sx(last.x) + 8} y={sy(last.y) + 4} className="chart-value">{formatY(last.y)}</text>
+        {stairs ? (
+          <>
+            <path d={stairs} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+            {points.map((p, i) => (
+              <circle key={i} cx={sx(p.x)} cy={sy(p.y)} r={p.mark ? 4.5 : 3.5} fill={p.mark ? color : 'var(--chart-session)'} className="chart-dot" />
+            ))}
+            <text x={sx(x1) + 8} y={sy(top!.y) + 4} className="chart-value">{formatY(top!.y)}</text>
+          </>
+        ) : (
+          <>
+            {showArea && <path d={area} fill={color} opacity={0.1} />}
+            <path d={line} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+            {points.map((p, i) => p.mark && <circle key={i} cx={sx(p.x)} cy={sy(p.y)} r={4} fill={color} className="chart-dot" />)}
+            <circle cx={sx(last.x)} cy={sy(last.y)} r={4} fill={color} className="chart-dot" />
+            <text x={sx(last.x) + 8} y={sy(last.y) + 4} className="chart-value">{formatY(last.y)}</text>
+          </>
+        )}
         {a && (
           <g pointerEvents="none">
             <line x1={sx(a.x)} x2={sx(a.x)} y1={PAD.top} y2={PAD.top + innerH} className="chart-crosshair" />
-            <circle cx={sx(a.x)} cy={sy(a.y)} r={5} fill={color} className="chart-dot" />
+            <circle cx={sx(a.x)} cy={sy(a.y)} r={5} fill={best && !a.mark ? 'var(--chart-session)' : color} className="chart-dot" />
           </g>
         )}
       </svg>

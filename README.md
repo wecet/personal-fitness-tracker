@@ -21,7 +21,7 @@ A personal workout tracker that runs as a web app, built around both the gym and
 - **Daily plan:** learns your weekly routine and suggests exercises, skipping recovering or sore muscles. Use the soreness check-in (from the plan) when something aches.
 - **Training load:** your acute:chronic workload ratio across gym and football, with a warning when load spikes.
 - **Tracker:** a contribution graph, a calendar with day detail, and your weekly rhythm.
-- **Progress:** per-exercise history with an estimated 1RM chart (3M / 6M / 1Y / All), best sets by rep count and the 8-week change; Personal Bests with a sparkline and trend per exercise; Bodyweight trend and Year in Review.
+- **Progress:** per-exercise history charting what you actually lifted: a dot per session, a "best so far" staircase that steps up with each PB, and PBs highlighted. Bodyweight exercises chart reps (best set or total reps), or added weight once you add it; holds chart the longest hold. Estimated 1RM is one tap away, with 3M / 6M / 1Y / All ranges, best sets by rep count and the 8-week change; Personal Bests with a sparkline and trend per exercise; Bodyweight trend and Year in Review.
 - **Evidence-based estimates:** effort per set is inferred as reps in reserve from your estimated 1RM (Wathen), fatigue decays exponentially per muscle, weekly volume counts hard sets, and training load uses session-RPE with an EWMA acute:chronic ratio. Settings → How the numbers work lists the sources.
 - **Works offline:** changes save on the device and sync when you're back online.
 - **Backups:** daily database copies (to iCloud Drive if you like), plus a JSON export under Settings → Tools.

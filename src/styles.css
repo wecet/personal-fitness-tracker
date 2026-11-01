@@ -478,6 +478,10 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 /* ---------- charts ---------- */
 
 :root { --chart-1: #e5675b; --chart-2: #3f9fc0; /* football; validated against --chart-1 for CVD on the dark surface */ --chart-grid: #33363b; }
+/* Neutral session dots under a coloured best-so-far line: the line is the story, the dots are the evidence. */
+:root { --chart-session: #8b9099; }
+.chart-legend i.dot-swatch { width: 8px; height: 8px; border-radius: 50%; background: var(--chart-session); }
+.chart-legend i.line-swatch { width: 14px; height: 2px; border-radius: 1px; vertical-align: 3px; }
 .chart { position: relative; }
 .chart svg { display: block; overflow: visible; outline: none; touch-action: pan-y; }
 .chart-grid { stroke: var(--chart-grid); stroke-width: 1; }
@@ -763,8 +767,7 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .record-name { flex: 1; min-width: 0; display: flex; flex-direction: column; font-weight: 600; }
 .record-name .small { font-weight: 400; }
 .history-chart { display: flex; flex-direction: column; gap: 8px; }
-.history-chart .card-head { align-items: center; }
-.history-chart .section-title { margin: 0; }
+.chart-controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
 .rep-maxes li > span:last-child { display: flex; gap: 8px; align-items: baseline; }
 .last-time { display: block; color: var(--muted); margin-bottom: 4px; }
 .suggestion.down .suggestion-icon { color: var(--warning); }
