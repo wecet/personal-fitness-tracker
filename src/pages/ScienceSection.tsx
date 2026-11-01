@@ -78,7 +78,6 @@ const TOPICS: { title: string; body: string; sources: string[] }[] = [
     sources: [
       'Fuller CW et al. (2006). Consensus statement on injury definitions and data collection procedures in football. Br J Sports Med 40:193–201.',
       'Ardern CL et al. (2016). 2016 Consensus statement on return to sport from the First World Congress in Sports Physical Therapy, Bern. Br J Sports Med 50:853–864.',
-      'Buckthorpe M et al. (2019). Recommendations for hamstring injury prevention in elite football: translating research into practice. Br J Sports Med 53:449–456.',
     ],
   },
   {

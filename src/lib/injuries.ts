@@ -201,7 +201,7 @@ export interface ReturnStage {
  * when its test is pain-free, then load builds toward the next (Ardern et al.,
  * 2016, Br J Sports Med 50:853–864). Lower-body injuries in football progress
  * through running, then sprinting and change of direction, before full team
- * training (Buckthorpe et al., 2019, Br J Sports Med 53:1223–1236).
+ * training.
  */
 const LOWER_STAGES: ReturnStage[] = [
   { name: 'Pain-free day to day', detail: 'Walking, stairs and getting up from a chair don’t hurt.' },
