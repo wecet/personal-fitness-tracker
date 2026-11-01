@@ -11,6 +11,7 @@ A personal workout tracker that runs as a web app, built around both the gym and
   - **Recovery:** trained muscles fill red and fade over their rest period.
   - **Volume:** weekly sets against a 10–20 target.
   - **Neglected:** muscles with no direct work in 10+ days pulse amber.
+- **Muscle regions:** tapping a muscle shows an illustration of it cut into numbered regions (upper, mid and lower chest; front, side and rear delts; the quad and hamstring muscles…), each with its own shading. Exercises are grouped under the same numbers, and tapping a region jumps to its exercises.
 - **Logging and PBs:** every exercise shows its PB. Exercises are weighted (reps × kg), bodyweight (reps, optional added kg) or timed (with a stopwatch). The logger suggests your next target and has a plate calculator.
 - **Plyometrics and mobility:** jumps, bounds and throws are logged as ground contacts and add leg fatigue by intensity; stretching and activation work (dead bugs, couch stretch, balance…) is logged without adding fatigue. Both are in the + menu and on each muscle.
 - **Injuries:** from the Injuries page, log an injury by area and side; it's outlined on the body map and kept out of your daily plan until you mark it recovered. History shows days out and severity (FIFA consensus). Weekly prevention targets (Nordic curls, Copenhagen adductor, jumping and landing, balance) come from trials in footballers, are scheduled around match days, and are flagged as a priority where you've been injured before.

@@ -3,9 +3,11 @@ import { MUSCLE_BY_ID, type MuscleId } from '../../shared/muscles.ts';
 import { EXERCISE_KINDS, EXERCISE_METRICS, type Exercise, type ExerciseKind, type ExerciseMetric } from '../../shared/types.ts';
 import { useData, useUi } from '../data.tsx';
 import { daysOut, injuryLabel, isActive } from '../lib/injuries.ts';
+import { groupByRegion } from '../lib/regions.ts';
 import { exercisesFor, formatPb, formatSets, recoveryLabel } from '../lib/stats.ts';
 import { ExerciseLogger } from './ExerciseLogger.tsx';
 import { Icon } from './Icon.tsx';
+import { MuscleDiagram } from './MuscleDiagram.tsx';
 import { Sheet } from './Sheet.tsx';
 
 const METRIC_LABEL: Record<ExerciseMetric, string> = { weight: 'Weight × reps', bodyweight: 'Bodyweight', time: 'Timed' };
@@ -111,13 +113,26 @@ export function MuscleSheet({ muscle, exerciseId, onClose }: { muscle: MuscleId;
   const [openId, setOpenId] = useState<number | null>(exerciseId ?? null);
   const info = MUSCLE_BY_ID[muscle];
   const f = fatigue.get(muscle);
-  const primary = exercisesFor(muscle, exercises, entries);
+  const { groups, other } = groupByRegion(muscle, exercisesFor(muscle, exercises, entries));
   const extras = (['plyometric', 'mobility'] as const)
     .map((kind) => ({ kind, list: exercisesFor(muscle, exercises, entries, kind) }))
     .filter((g) => g.list.length > 0);
   const assisting = exercises.filter((ex) => ex.kind === 'strength' && ex.secondary.includes(muscle));
   const injury = injuries.find((i) => isActive(i) && i.area === muscle);
   const toggle = (id: number) => setOpenId((cur) => (cur === id ? null : id));
+  const rows = (list: Exercise[]) => (
+    <ul className="exercise-list">
+      {list.map((ex) => <ExerciseRow key={ex.id} exercise={ex} open={openId === ex.id} onToggle={() => toggle(ex.id)} />)}
+    </ul>
+  );
+  const pick = (regionId: string) => {
+    const group = document.getElementById(`region-${regionId}`);
+    if (!group) return;
+    group.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    group.classList.remove('flash');
+    void group.offsetWidth; // restart the animation on repeat taps
+    group.classList.add('flash');
+  };
 
   return (
     <Sheet
@@ -133,11 +148,22 @@ export function MuscleSheet({ muscle, exerciseId, onClose }: { muscle: MuscleId;
           <Icon name="chevron" size={16} />
         </button>
       )}
-      <ul className="exercise-list">
-        {primary.map((ex) => (
-          <ExerciseRow key={ex.id} exercise={ex} open={openId === ex.id} onToggle={() => toggle(ex.id)} />
-        ))}
-      </ul>
+      <MuscleDiagram muscle={muscle} groups={groups} onPick={pick} />
+      {groups.map(({ region, number, exercises: list }) => (
+        <section key={region.id} id={`region-${region.id}`} className="region-group">
+          <h3 className="region-title">
+            <span className="region-number">{number}</span>
+            <span>{region.name}<span className="muted small">{region.hint}</span></span>
+          </h3>
+          {list.length > 0 ? rows(list) : <p className="muted small">No exercises here yet — add your own below.</p>}
+        </section>
+      ))}
+      {other.length > 0 && (
+        <section className="region-group">
+          <h3 className="section-title">Other</h3>
+          {rows(other)}
+        </section>
+      )}
       {extras.map(({ kind, list }) => (
         <section key={kind} className="kind-group">
           <h3 className="section-title">{kind === 'plyometric' ? 'Plyometrics' : 'Mobility'}</h3>

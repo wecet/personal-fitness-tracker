@@ -681,3 +681,25 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .check-field { flex-direction: row; align-items: center; flex-wrap: wrap; }
 .check-field input[type='checkbox'] { width: 20px; height: 20px; padding: 0; accent-color: var(--coral); }
 .btn.danger { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 40%, var(--border)); }
+
+/* ---------- muscle regions ---------- */
+
+.muscle-diagram { display: flex; justify-content: center; gap: 24px; padding: 12px 0 4px; }
+.diagram-view { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.diagram-view svg { display: block; max-width: 100%; overflow: visible; }
+.diagram-body path { fill: var(--skin-core); opacity: 0.5; }
+.diagram-region, .diagram-label { cursor: pointer; }
+.diagram-label circle { fill: var(--surface); stroke: var(--coral); }
+.diagram-leader { fill: none; stroke: var(--text); opacity: 0.7; }
+.diagram-label .diagram-anchor { fill: var(--text); stroke: var(--surface); }
+.diagram-label text { fill: var(--text); font-weight: 700; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.region-group { display: flex; flex-direction: column; gap: 8px; scroll-margin-top: 8px; border-radius: 12px; }
+.region-group.flash { animation: region-flash 1.2s ease-out; }
+@keyframes region-flash { from { background: color-mix(in srgb, var(--coral) 16%, transparent); box-shadow: 0 0 0 8px color-mix(in srgb, var(--coral) 16%, transparent); } }
+.region-title { display: flex; align-items: center; gap: 12px; margin-top: 8px; font-size: 15px; }
+.region-title > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.region-title .muted { font-weight: 400; }
+.region-number {
+  width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px solid var(--coral); color: var(--text); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
