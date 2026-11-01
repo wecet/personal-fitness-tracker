@@ -139,7 +139,12 @@ export interface Injury {
   resolvedAt: string | null;
   context: InjuryContext;
   note: string | null;
+  /** Return-to-play stages cleared so far (missing on older records = 0). */
+  stage?: number;
 }
+
+/** The longest return-to-play checklist, for validation. */
+export const MAX_RETURN_STAGES = 6;
 
 /**
  * Every user record kind. Records carry a client-generated string id so they

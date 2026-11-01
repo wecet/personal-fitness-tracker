@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type CSSProperties } from 'react';
 import type { MuscleId } from '../../shared/muscles.ts';
 import type { RegionGroup, View } from '../lib/regions.ts';
 import { BACK, FRONT, HEAD, SILHOUETTE, both, mirror } from './bodyPaths.ts';
@@ -8,6 +8,9 @@ const HEIGHT = 160;
 /** Callout badge radius and the gap between badges and the muscle, in px. */
 const BADGE = 9;
 const GAP = 14;
+
+/** Regions fill in one after another when the sheet opens. */
+const order = (n: number) => ({ '--i': n }) as CSSProperties;
 
 function bounds(paths: string[]) {
   const xs: number[] = [];
@@ -87,15 +90,15 @@ function DiagramView({ muscle, view, groups, onPick }: { muscle: MuscleId; view:
           <rect x={vb.x} y={vb.y} width={vb.w} height={vb.h} fill="var(--muscle-lo)" />
           {areas.map(({ points, group, i }) =>
             (whole ? [points, mirror(points)] : [points]).map((p, k) => (
-              <polygon key={`${group.region.id}-${k}`} className="diagram-region" points={p} fill={shade(i)} fillOpacity={i === 0 ? 0.85 : 1}
+              <polygon key={`${group.region.id}-${k}`} className="diagram-region" style={order(i)} points={p} fill={shade(i)} fillOpacity={i === 0 ? 0.85 : 1}
                 stroke="var(--surface)" strokeWidth={1.6 * u} onClick={() => onPick(group.region.id)} />
             )),
           )}
         </g>
         {paths.map((d, k) => <path key={k} d={d} fill="none" stroke="var(--skin-edge)" strokeWidth={u} />)}
         {callouts.map(({ label: [x, ay], y, group }) => (
-          <g key={group.region.id} className="diagram-label" onClick={() => onPick(group.region.id)}>
-            <path className="diagram-leader" d={`M${column + BADGE * u},${y} L${column + (BADGE + 4) * u},${y} L${x},${ay}`} strokeWidth={u} />
+          <g key={group.region.id} className="diagram-label" style={order(group.number - 1)} onClick={() => onPick(group.region.id)}>
+            <path className="diagram-leader" pathLength={1} d={`M${column + BADGE * u},${y} L${column + (BADGE + 4) * u},${y} L${x},${ay}`} strokeWidth={u} />
             <circle className="diagram-anchor" cx={x} cy={ay} r={1.8 * u} />
             <circle cx={column} cy={y} r={BADGE * u} strokeWidth={1.4 * u} />
             <text x={column} y={y} fontSize={11 * u} dy=".35em">{group.number}</text>

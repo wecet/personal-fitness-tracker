@@ -1,4 +1,4 @@
-import { EXERCISE_KINDS, EXERCISE_METRICS, FOOTBALL_TYPES, INJURY_CONTEXTS, JOINT_AREAS, type Exercise, type ExerciseMetric, type Injury, type NewExercise, type RecordKind, type RecordMap, type WorkoutSet } from '../shared/types.ts';
+import { EXERCISE_KINDS, EXERCISE_METRICS, FOOTBALL_TYPES, INJURY_CONTEXTS, JOINT_AREAS, MAX_RETURN_STAGES, type Exercise, type ExerciseMetric, type Injury, type NewExercise, type RecordKind, type RecordMap, type WorkoutSet } from '../shared/types.ts';
 import { isMuscleId } from '../shared/muscles.ts';
 
 export class ValidationError extends Error {}
@@ -115,6 +115,7 @@ export function makeValidators(getExercise: (id: number) => Exercise | undefined
         resolvedAt,
         context: INJURY_CONTEXTS.find((c) => c === r.context) ?? 'other',
         note: note(r.note),
+        stage: r.stage == null ? 0 : int(r.stage, 'stage', 0, MAX_RETURN_STAGES),
       };
     },
     routine(raw) {

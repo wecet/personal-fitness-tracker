@@ -3,9 +3,59 @@ import { MUSCLES, type MuscleCategory } from '../../shared/muscles.ts';
 import { INJURY_CONTEXTS, JOINT_AREAS, type Injury, type InjuryArea, type InjuryContext, type InjurySide } from '../../shared/types.ts';
 import { useData, useUi } from '../data.tsx';
 import { areaLabel, CONTEXT_LABEL, daysOut, injuryLabel, severity, SIDE_LABEL } from '../lib/injuries.ts';
-import { dateKey } from '../lib/stats.ts';
+import { weeksBefore, type LoadZone } from '../lib/load.ts';
+import { dateKey, parseDateKey } from '../lib/stats.ts';
 import { newId } from '../lib/store.ts';
+import { StackedColumns } from './charts.tsx';
 import { Sheet } from './Sheet.tsx';
+
+const WEEKS_BEFORE = 6;
+const ZONE_PHRASE: Record<Exclude<LoadZone, 'baseline'>, string> = {
+  low: 'lighter than usual',
+  sweet: 'in the sweet spot',
+  caution: 'above your usual, in the caution zone',
+  spike: 'a spike, the zone linked to more injuries',
+};
+const dayMonth = (d: Date) => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+
+/** The weeks of training leading up to an injury, against your usual load. */
+function LoadBefore({ injury }: { injury: Injury }) {
+  const { daily, firstDay, loadSeries } = useData();
+  if (!firstDay || firstDay >= injury.startedAt) return null;
+  const day = parseDateKey(injury.startedAt);
+  const weeks = weeksBefore(daily, day, WEEKS_BEFORE);
+  const dayBefore = dateKey(new Date(day.getFullYear(), day.getMonth(), day.getDate() - 1));
+  const w = loadSeries.find((x) => dateKey(x.day) === dayBefore);
+  const totals = weeks.map((wk) => wk.gym + wk.football);
+  const last = totals.at(-1)!;
+  const prior = totals.slice(-4, -1).filter((t) => t > 0);
+  const avg = prior.length ? prior.reduce((a, b) => a + b, 0) / prior.length : 0;
+
+  const summary =
+    w?.ratio != null && w.zone !== 'baseline'
+      ? `The day before, your recent load was ${w.ratio.toFixed(1)}× your usual: ${ZONE_PHRASE[w.zone]}.`
+      : avg > 0
+        ? `The week before was ${Math.round(Math.abs(last / avg - 1) * 100)}% ${last >= avg ? 'above' : 'below'} the three weeks before it.`
+        : 'Not much training logged before it to compare with.';
+
+  return (
+    <section className="load-before">
+      <h3 className="section-title">Load before it happened</h3>
+      <p className="small">{summary}</p>
+      <StackedColumns
+        height={150}
+        bars={weeks.map((wk, i) => ({
+          label: `${WEEKS_BEFORE - i}w`,
+          title: `${dayMonth(wk.start)} – ${dayMonth(wk.end)}`,
+          values: [wk.gym, wk.football],
+        }))}
+        series={[{ name: 'Gym', color: 'var(--chart-1)' }, { name: 'Football', color: 'var(--chart-2)' }]}
+        label={`Weekly training load in the ${WEEKS_BEFORE} weeks before the injury`}
+        formatY={(n) => `${Math.round(n)} AU`}
+      />
+    </section>
+  );
+}
 
 const CATEGORIES: [MuscleCategory, string][] = [
   ['legs', 'Legs'],
@@ -46,6 +96,7 @@ export function InjurySheet({ injuryId, onClose }: { injuryId?: string; onClose:
       resolvedAt: resolvedAt && resolvedAt < startedAt ? startedAt : resolvedAt,
       context,
       note: note.trim() || null,
+      stage: existing?.stage ?? 0,
     };
     put('injury', injury);
     notify(
@@ -64,6 +115,7 @@ export function InjurySheet({ injuryId, onClose }: { injuryId?: string; onClose:
 
   return (
     <Sheet title={existing ? injuryLabel(existing) : 'Log an injury'} subtitle={existing ? `Since ${existing.startedAt}` : 'Where does it hurt?'} onClose={onClose}>
+      {existing && <LoadBefore injury={existing} />}
       <form className="injury-form" onSubmit={submit}>
         {GROUPS.map(([label, areas]) => (
           <div key={label} className="sore-group">

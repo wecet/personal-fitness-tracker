@@ -152,8 +152,8 @@ function Figure({ side, overlay, tone, suggested, injured, hover, onHover, onSel
 
       <g className={`overlays ${tone}`} filter={tone === 'volume' ? undefined : url('glow')}>
         {muscles.map(([m, paths]) => {
+          // Kept in the DOM at zero so changes (like the weekly replay) fade both ways.
           const level = overlay.get(m) ?? 0;
-          if (level < 0.02) return null;
           return paths.map((d, i) => (
             <path key={`${m}-${i}`} d={d} className="overlay" fill={tone === 'fatigue' ? url('heat') : undefined}
               style={{ opacity: level * (tone === 'fatigue' ? 0.95 : 0.7) }} />

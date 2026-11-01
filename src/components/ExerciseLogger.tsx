@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useData, useUi } from '../data.tsx';
-import { beats, bestSet, dateKey, formatPb, formatSet, parseDateKey, type PersonalBest } from '../lib/stats.ts';
+import { beats, bestSet, dateKey, formatPb, formatSet, formatSets, parseDateKey, type PersonalBest } from '../lib/stats.ts';
+import { haptic } from '../lib/haptics.ts';
+import { loadingStageName, rehabInjury } from '../lib/injuries.ts';
 import type { Exercise, ExerciseMetric, WorkoutSet } from '../../shared/types.ts';
 import { suggestNext } from '../lib/progression.ts';
 import { useSession } from '../session.tsx';
@@ -28,6 +30,17 @@ const toDraft = (s: WorkoutSet, metric: ExerciseMetric): SetDraft => ({
   time: s.seconds ? clock(s.seconds) : '0:30',
 });
 
+const DAY = 86_400_000;
+const TONE_ICON = { up: '↗', hold: '→', down: '↘' } as const;
+
+function ago(iso: string, now: number) {
+  const days = Math.floor((now - Date.parse(iso)) / DAY);
+  if (dateKey(iso) === dateKey(new Date(now))) return 'today';
+  if (days <= 1) return 'yesterday';
+  if (days < 14) return `${days} days ago`;
+  return `${Math.round(days / 7)} weeks ago`;
+}
+
 const blank = (): SetDraft => ({ reps: '10', weight: '', time: '0:30' });
 
 function parse(drafts: SetDraft[], metric: ExerciseMetric): WorkoutSet[] | null {
@@ -51,7 +64,7 @@ const COLUMNS: Record<ExerciseMetric, [string, string, string]> = {
 };
 
 export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; pb?: PersonalBest; onSaved: () => void }) {
-  const { entries, addEntry, activeSession } = useData();
+  const { entries, sessions, injuries, now, addEntry, activeSession } = useData();
   const { startRest } = useSession();
   const { notify } = useUi();
   const { metric } = exercise;
@@ -62,7 +75,9 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
   const [sets, setSets] = useState<SetDraft[]>(() => (last ? last.sets.map((s) => toDraft(s, metric)) : [blank()]));
   const [stopwatch, setStopwatch] = useState<{ index: number; startedAt: number } | null>(null);
   const [, tick] = useState(0);
-  const suggestion = suggestNext(entries.filter((e) => e.exerciseId === exercise.id), exercise);
+  const rehab = rehabInjury(injuries, exercise.muscle);
+  const rpe = (e: { sessionId?: string | null }) => sessions.find((s) => s.id === e.sessionId)?.rpe;
+  const suggestion = rehab ? null : suggestNext(entries.filter((e) => e.exerciseId === exercise.id), exercise, { now, rpe });
   const [applied, setApplied] = useState(false);
   const [done, setDone] = useState<Set<number>>(new Set());
   const [plates, setPlates] = useState(false);
@@ -88,6 +103,7 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
     if (next.has(i)) next.delete(i);
     else {
       next.add(i);
+      haptic();
       startRest();
     }
     setDone(next);
@@ -107,16 +123,29 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
     if (!parsed) return;
     const at = date === today ? new Date() : new Date(parseDateKey(date).setHours(12));
     const { isPb } = addEntry({ exerciseId: exercise.id, performedAt: at.toISOString(), sets: parsed });
+    haptic(isPb ? 'success' : 'tap');
     notify(isPb ? `New PB! ${exercise.name} — ${formatSet(top!, metric)}` : `Saved ${exercise.name}`, isPb ? 'pb' : 'default');
     onSaved();
   }
 
   return (
     <form className="logger" onSubmit={submit}>
+      {rehab && (
+        <div className="suggestion rehab">
+          <span className="suggestion-icon">+</span>
+          <span>
+            <strong>Rehab sets only.</strong> Keep it light and pain-free — progression is paused until you clear
+            “{loadingStageName(rehab)}” on your return-to-play checklist.
+          </span>
+        </div>
+      )}
       {suggestion && (
-        <div className="suggestion">
-          <span className="suggestion-icon">↗</span>
-          <span>{suggestion.detail}</span>
+        <div className={`suggestion ${suggestion.tone}`}>
+          <span className="suggestion-icon" aria-hidden="true">{TONE_ICON[suggestion.tone]}</span>
+          <span>
+            {last && <span className="last-time">Last time, {ago(last.performedAt, now)}: {formatSets(last.sets, metric)}</span>}
+            {suggestion.detail}
+          </span>
           <button type="button" className="pill" disabled={applied} onClick={() => {
             setSets(suggestion.sets.map((s) => toDraft(s, metric)));
             setApplied(true);

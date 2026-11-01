@@ -188,3 +188,82 @@ export function preventionDue(status: ProtocolStatus[], ctx: { avoidLegs: boolea
     .filter((s) => s.done < s.protocol.target && !s.doneToday && !s.blocked && fits(s.protocol.timing))
     .sort((a, b) => Number(b.priority) - Number(a.priority));
 }
+
+// ---------- return to play ----------
+
+export interface ReturnStage {
+  name: string;
+  detail: string;
+}
+
+/*
+ * Return to play is a continuum of criteria, not a date: each stage is cleared
+ * when its test is pain-free, then load builds toward the next (Ardern et al.,
+ * 2016, Br J Sports Med 50:853–864). Lower-body injuries in football progress
+ * through running, then sprinting and change of direction, before full team
+ * training (Buckthorpe et al., 2019, Br J Sports Med 53:1223–1236).
+ */
+const LOWER_STAGES: ReturnStage[] = [
+  { name: 'Pain-free day to day', detail: 'Walking, stairs and getting up from a chair don’t hurt.' },
+  { name: 'Full range of motion', detail: 'It moves and stretches as far as the other side.' },
+  { name: 'Loaded strength', detail: 'Moderate gym work for it is pain-free and close to the other side.' },
+  { name: 'Running', detail: 'Jogging and straight-line running at about 70% with no reaction the next day.' },
+  { name: 'Sprinting & cutting', detail: 'Full-speed sprints, turns, jumps and kicking are pain-free.' },
+  { name: 'Full team training', detail: 'A whole session with contact and no reaction the next day.' },
+];
+
+const UPPER_STAGES: ReturnStage[] = [
+  { name: 'Pain-free day to day', detail: 'Lifting, carrying and reaching don’t hurt.' },
+  { name: 'Full range of motion', detail: 'It moves as far as the other side.' },
+  { name: 'Loaded strength', detail: 'Light to moderate sets for it are pain-free.' },
+  { name: 'Heavy sets', detail: 'Your usual working weights feel normal with no reaction the next day.' },
+  { name: 'Full training', detail: 'A normal session, including falls and contact in football.' },
+];
+
+/** Stages are cleared in order; loading only progresses again after this one. */
+const LOADING_STAGE = 2;
+
+const isUpper = (area: InjuryArea) =>
+  isMuscleId(area) ? ['push', 'pull'].includes(MUSCLE_BY_ID[area].category) : area === 'wrist' || area === 'elbow' || area === 'neck';
+
+export const returnStages = (i: Pick<Injury, 'area'>): ReturnStage[] => (isUpper(i.area) ? UPPER_STAGES : LOWER_STAGES);
+
+export const stagesCleared = (i: Injury) => Math.min(i.stage ?? 0, returnStages(i).length);
+
+/** An ongoing injury on this muscle that hasn't cleared loaded strength yet: no progression, rehab sets only. */
+export function rehabInjury(injuries: Injury[], muscle: MuscleId): Injury | undefined {
+  return injuries.find((i) => isActive(i) && areaMuscles(i.area).includes(muscle) && stagesCleared(i) <= LOADING_STAGE);
+}
+
+export const loadingStageName = (i: Injury) => returnStages(i)[LOADING_STAGE].name;
+
+// ---------- timeline ----------
+
+export interface TimelineBar {
+  injury: Injury;
+  /** 0–1 across the window. */
+  from: number;
+  to: number;
+  lane: number;
+}
+
+/** Injuries overlapping the last `days`, packed into as few lanes as don't overlap. */
+export function timeline(injuries: Injury[], today: string, days = 365): TimelineBar[] {
+  const end = parseDateKey(today).getTime() + DAY;
+  const start = end - days * DAY;
+  const lanes: number[] = [];
+  return [...injuries]
+    .sort((a, b) => a.startedAt.localeCompare(b.startedAt))
+    .map((injury) => {
+      const s = parseDateKey(injury.startedAt).getTime();
+      const e = parseDateKey(injury.resolvedAt ?? today).getTime() + DAY;
+      return { injury, s, e };
+    })
+    .filter(({ e }) => e > start)
+    .map(({ injury, s, e }) => {
+      let lane = lanes.findIndex((free) => free <= s);
+      if (lane < 0) lane = lanes.push(0) - 1;
+      lanes[lane] = e;
+      return { injury, from: Math.max(0, (s - start) / (end - start)), to: (e - start) / (end - start), lane };
+    });
+}

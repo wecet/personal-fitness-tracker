@@ -2,8 +2,9 @@ import { useState, type FormEvent } from 'react';
 import { MUSCLE_BY_ID, type MuscleId } from '../../shared/muscles.ts';
 import { EXERCISE_KINDS, EXERCISE_METRICS, type Exercise, type ExerciseKind, type ExerciseMetric } from '../../shared/types.ts';
 import { useData, useUi } from '../data.tsx';
-import { daysOut, injuryLabel, isActive } from '../lib/injuries.ts';
+import { daysOut, injuryLabel, isActive, returnStages, stagesCleared } from '../lib/injuries.ts';
 import { groupByRegion } from '../lib/regions.ts';
+import { averageTrend, formatPct, progressSeries, trend, TREND_DAYS } from '../lib/trends.ts';
 import { exercisesFor, formatPb, formatSets, recoveryLabel } from '../lib/stats.ts';
 import { ExerciseLogger } from './ExerciseLogger.tsx';
 import { Icon } from './Icon.tsx';
@@ -108,7 +109,7 @@ function AddExercise({ muscle }: { muscle: MuscleId }) {
 }
 
 export function MuscleSheet({ muscle, exerciseId, onClose }: { muscle: MuscleId; exerciseId?: number; onClose: () => void }) {
-  const { exercises, entries, fatigue, injuries } = useData();
+  const { exercises, entries, fatigue, injuries, now } = useData();
   const { openInjury } = useUi();
   const [openId, setOpenId] = useState<number | null>(exerciseId ?? null);
   const info = MUSCLE_BY_ID[muscle];
@@ -119,6 +120,9 @@ export function MuscleSheet({ muscle, exerciseId, onClose }: { muscle: MuscleId;
     .filter((g) => g.list.length > 0);
   const assisting = exercises.filter((ex) => ex.kind === 'strength' && ex.secondary.includes(muscle));
   const injury = injuries.find((i) => isActive(i) && i.area === muscle);
+  /** Average strength change across a region's exercises lately, so you can see which part is moving. */
+  const regionTrend = (list: Exercise[]) =>
+    averageTrend(list.map((ex) => trend(progressSeries(ex, entries.filter((e) => e.exerciseId === ex.id)).points, now)));
   const toggle = (id: number) => setOpenId((cur) => (cur === id ? null : id));
   const rows = (list: Exercise[]) => (
     <ul className="exercise-list">
@@ -143,21 +147,30 @@ export function MuscleSheet({ muscle, exerciseId, onClose }: { muscle: MuscleId;
       {injury && (
         <button className="injury-banner" onClick={() => openInjury(injury.id)}>
           <span>
-            <strong>{injuryLabel(injury)} injury</strong> · day {daysOut(injury) + 1}. Keep it pain-free — it’s left out of your plan.
+            <strong>{injuryLabel(injury)} injury</strong> · day {daysOut(injury) + 1} · return to play {stagesCleared(injury)}/{returnStages(injury).length}.
+            Keep it pain-free — it’s left out of your plan.
           </span>
           <Icon name="chevron" size={16} />
         </button>
       )}
       <MuscleDiagram muscle={muscle} groups={groups} onPick={pick} />
-      {groups.map(({ region, number, exercises: list }) => (
+      {groups.map(({ region, number, exercises: list }) => {
+        const pct = regionTrend(list);
+        return (
         <section key={region.id} id={`region-${region.id}`} className="region-group">
           <h3 className="region-title">
             <span className="region-number">{number}</span>
             <span>{region.name}<span className="muted small">{region.hint}</span></span>
+            {pct != null && (
+              <span className={`region-trend trend ${pct > 0.005 ? 'up' : pct < -0.005 ? 'down' : ''}`} title={`Strength change over the last ${TREND_DAYS / 7} weeks`}>
+                {formatPct(pct)}<span className="muted small">{TREND_DAYS / 7} wk</span>
+              </span>
+            )}
           </h3>
           {list.length > 0 ? rows(list) : <p className="muted small">No exercises here yet — add your own below.</p>}
         </section>
-      ))}
+        );
+      })}
       {other.length > 0 && (
         <section className="region-group">
           <h3 className="section-title">Other</h3>

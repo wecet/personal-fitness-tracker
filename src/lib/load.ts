@@ -147,3 +147,20 @@ export function weeklyLoad(daily: Map<string, DayLoad>, now: Date, weeks: number
   });
 }
 
+
+/** Rolling 7-day loads for the `weeks` weeks before (not including) `day`, oldest first. */
+export function weeksBefore(daily: Map<string, DayLoad>, day: Date, weeks: number) {
+  return Array.from({ length: weeks }, (_, k) => {
+    const w = weeks - 1 - k;
+    const start = addDays(day, -7 * (w + 1));
+    const sum: DayLoad = { gym: 0, football: 0 };
+    for (let i = 0; i < 7; i++) {
+      const d = daily.get(dateKey(addDays(start, i)));
+      if (d) {
+        sum.gym += d.gym;
+        sum.football += d.football;
+      }
+    }
+    return { start, end: addDays(start, 6), ...sum };
+  });
+}

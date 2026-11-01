@@ -13,6 +13,8 @@ const PATHS = {
   download: 'M12 4v11m0 0l-4-4m4 4l4-4M5 20h14',
   timer: 'M12 9v4l2.5 2M9.5 2.5h5M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16z',
   stop: 'M8 8h8v8H8z',
+  play: 'M8 5.5v13l10.5-6.5z',
+  pause: 'M8.5 5.5v13M15.5 5.5v13',
   pulse: 'M3 12h4l2-5 4 10 2-5h6',
   chart: 'M4 20V10m6 10V4m6 16v-7m4 7H3',
   plates: 'M3 12h18M6 7v10M9 5v14M15 5v14M18 7v10',

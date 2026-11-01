@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MUSCLES, type MuscleId } from '../../shared/muscles.ts';
 import { BodyMap, type OverlayTone, type Side } from '../components/BodyMap.tsx';
 import { Icon } from '../components/Icon.tsx';
@@ -17,6 +17,12 @@ const MODES: { id: Mode; label: string; tone: OverlayTone }[] = [
 const MODE_KEY = 'ember-body-mode';
 const WEEKLY_TARGET = { min: 10, max: 20 };
 const NEGLECTED_DAYS = 10;
+const DAY = 86_400_000;
+/** How far back the volume replay reaches, and how long each week stays on screen. */
+const REPLAY_WEEKS = 12;
+const REPLAY_STEP_MS = 900;
+
+const dayMonth = (ms: number) => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
 function useMode() {
   const [mode, setMode] = useState<Mode>(() => {
@@ -46,8 +52,30 @@ export function BodyPage() {
   const { openMuscle, openPlan } = useUi();
   const [mode, setMode] = useMode();
   const [side, setSide] = useState<Side>('front');
+  const [weeksBack, setWeeksBack] = useState(0);
+  const [playing, setPlaying] = useState(false);
 
-  const volume = useMemo(() => weeklySets(entries, exById, now, efforts), [entries, exById, now, efforts]);
+  // Volume can be replayed week by week to show what's been building up or left behind.
+  const firstAt = entries.length ? Date.parse(entries[0].performedAt) : now;
+  const weeksAvailable = Math.min(REPLAY_WEEKS - 1, Math.floor((now - firstAt) / (7 * DAY)));
+  const back = mode === 'volume' ? Math.min(weeksBack, weeksAvailable) : 0;
+  const at = now - back * 7 * DAY;
+  const weekLabel = back === 0 ? 'Last 7 days' : `${dayMonth(at - 6 * DAY)} – ${dayMonth(at)}`;
+
+  useEffect(() => {
+    if (!playing) return;
+    if (weeksBack <= 0) return setPlaying(false);
+    const t = setTimeout(() => setWeeksBack((w) => w - 1), REPLAY_STEP_MS);
+    return () => clearTimeout(t);
+  }, [playing, weeksBack]);
+
+  const togglePlay = () => {
+    if (playing) return setPlaying(false);
+    if (weeksBack === 0) setWeeksBack(weeksAvailable);
+    setPlaying(true);
+  };
+
+  const volume = useMemo(() => weeklySets(entries, exById, at, efforts), [entries, exById, at, efforts]);
   const since = useMemo(() => daysSinceTrained(entries, exById, now), [entries, exById, now]);
   const injured = useMemo(() => injuredSides(injuries), [injuries]);
   const activeInjuries = injuries.filter(isActive);
@@ -75,7 +103,9 @@ export function BodyPage() {
       : mode === 'recovery'
         ? recovering.length ? `${names(recovering)} recovering` : 'Everything is recovered'
         : mode === 'volume'
-          ? under.length ? `${under.length} of ${MUSCLES.length} muscles under ${WEEKLY_TARGET.min} hard sets this week` : 'Every muscle hit its weekly target'
+          ? under.length
+            ? `${under.length} of ${MUSCLES.length} muscles under ${WEEKLY_TARGET.min} hard sets ${back ? 'that week' : 'this week'}`
+            : `Every muscle hit its weekly target${back ? ' that week' : ''}`
           : neglected.length ? `${names(neglected)} — no work in ${NEGLECTED_DAYS}+ days` : 'Nothing neglected';
 
   return (
@@ -102,6 +132,16 @@ export function BodyPage() {
           <Icon name="flip" size={18} />
         </button>
       </div>
+      {mode === 'volume' && weeksAvailable > 0 && (
+        <div className="replay">
+          <button className="icon-btn small" onClick={togglePlay} aria-label={playing ? 'Pause replay' : 'Replay past weeks'}>
+            <Icon name={playing ? 'pause' : 'play'} size={18} />
+          </button>
+          <input type="range" min={-weeksAvailable} max={0} step={1} value={-back} aria-label="Week shown" aria-valuetext={weekLabel}
+            onChange={(e) => { setPlaying(false); setWeeksBack(-Number(e.target.value)); }} />
+          <span className="replay-label">{weekLabel}</span>
+        </div>
+      )}
       <p className="home-caption">{caption}</p>
       {activeInjuries.length > 0 && (
         <a className="home-injury" href="#/injuries">

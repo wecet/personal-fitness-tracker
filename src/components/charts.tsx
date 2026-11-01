@@ -274,3 +274,22 @@ export function StackedColumns({
     </div>
   );
 }
+
+// ---------- sparkline ----------
+
+/** A word-sized trend line: no axes, just the shape and where it ended. */
+export function Sparkline({ values, width = 56, height = 20, color = 'var(--chart-1)' }: { values: number[]; width?: number; height?: number; color?: string }) {
+  if (values.length < 2) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const pad = 3;
+  const x = (i: number) => pad + (i / (values.length - 1)) * (width - 2 * pad);
+  const y = (v: number) => (max === min ? height / 2 : pad + (1 - (v - min) / (max - min)) * (height - 2 * pad));
+  const d = values.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  return (
+    <svg className="sparkline" width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+      <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={x(values.length - 1)} cy={y(values.at(-1)!)} r={2.5} fill={color} />
+    </svg>
+  );
+}

@@ -1,10 +1,79 @@
 import { useData, useUi } from '../data.tsx';
 import { Icon } from '../components/Icon.tsx';
-import { areaLabel, CONTEXT_LABEL, daysOut, injuryLabel, isActive, severity, type ProtocolStatus } from '../lib/injuries.ts';
+import { areaLabel, CONTEXT_LABEL, daysOut, injuryLabel, isActive, returnStages, severity, stagesCleared, timeline, type ProtocolStatus } from '../lib/injuries.ts';
+import { haptic } from '../lib/haptics.ts';
 import { dateKey } from '../lib/stats.ts';
 import type { Injury } from '../../shared/types.ts';
 
 const DAY = 86_400_000;
+
+const MONTH_MS = 365 * DAY;
+
+/** A year of injuries as bars, one lane per overlap; tap targets are the list below it. */
+function InjuryTimeline({ injuries }: { injuries: Injury[] }) {
+  const today = dateKey(new Date());
+  const bars = timeline(injuries, today);
+  if (bars.length === 0) return null;
+  const lanes = Math.max(...bars.map((b) => b.lane)) + 1;
+  const end = new Date(`${today}T00:00`).getTime() + DAY;
+  const start = end - MONTH_MS;
+  const months = Array.from({ length: 12 }, (_, k) => {
+    const d = new Date(end);
+    d.setDate(1);
+    d.setMonth(d.getMonth() - k);
+    return { x: (d.getTime() - start) / MONTH_MS, label: d.toLocaleDateString(undefined, { month: 'narrow' }) };
+  }).filter((m) => m.x >= 0 && m.x < 0.98);
+
+  return (
+    <div className="injury-timeline" aria-hidden="true">
+      <div className="timeline-track" style={{ height: lanes * 14 + 4 }}>
+        {months.map((m) => <span key={m.x} className="timeline-tick" style={{ left: `${m.x * 100}%` }} />)}
+        {bars.map(({ injury, from, to, lane }) => (
+          <span key={injury.id} className={`timeline-bar ${isActive(injury) ? 'active' : `sev-${severity(daysOut(injury)).toLowerCase()}`}`}
+            style={{ left: `${from * 100}%`, width: `max(6px, ${(to - from) * 100}%)`, top: lane * 14 + 2 }} />
+        ))}
+      </div>
+      <div className="timeline-months">
+        {months.map((m) => <span key={m.x} style={{ left: `${m.x * 100}%` }}>{m.label}</span>)}
+      </div>
+    </div>
+  );
+}
+
+/** Criteria to clear in order before full training: tap the next one when it's true. */
+function ReturnToPlay({ injury }: { injury: Injury }) {
+  const { put } = useData();
+  const stages = returnStages(injury);
+  const cleared = stagesCleared(injury);
+  const set = (stage: number) => {
+    haptic();
+    put('injury', { ...injury, stage });
+  };
+  return (
+    <div className="rtp">
+      <div className="card-head">
+        <h4>Return to play</h4>
+        <span className="muted small">{cleared}/{stages.length} cleared</span>
+      </div>
+      <ol>
+        {stages.map((st, i) => {
+          const state = i < cleared ? 'done' : i === cleared ? 'next' : 'later';
+          return (
+            <li key={st.name} className={state}>
+              <button onClick={() => set(i < cleared ? i : i + 1)} aria-pressed={i < cleared} disabled={state === 'later'}>
+                <span className="rtp-check" aria-hidden="true">{i < cleared ? '✓' : i + 1}</span>
+                <span className="rtp-text">
+                  <span>{st.name}</span>
+                  {state === 'next' && <span className="muted small">{st.detail}</span>}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
 
 const longDate = (key: string) => new Date(`${key}T12:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -63,7 +132,10 @@ function ActiveInjury({ injury }: { injury: Injury }) {
         <button className="icon-btn small" onClick={() => openInjury(injury.id)} aria-label="Edit injury"><Icon name="settings" size={18} /></button>
       </div>
       {injury.note && <p className="injury-note">{injury.note}</p>}
-      <button className="btn ghost block" onClick={recovered}>Back to full training</button>
+      <ReturnToPlay injury={injury} />
+      <button className={`btn block ${stagesCleared(injury) >= returnStages(injury).length ? 'primary' : 'ghost'}`} onClick={recovered}>
+        Back to full training
+      </button>
     </section>
   );
 }
@@ -107,6 +179,7 @@ export function InjuriesPage() {
             <div><strong>{daysLost}</strong><span className="muted small">days out</span></div>
             {common && common[1] > 1 && <div><strong>{common[0]}</strong><span className="muted small">most often</span></div>}
           </div>
+          <InjuryTimeline injuries={injuries} />
           {past.length > 0 && (
             <ul className="injury-history">
               {past.map((i) => {
