@@ -1,14 +1,18 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
-import { extname, join, normalize, resolve } from 'node:path';
+import { dirname, extname, join, normalize, resolve } from 'node:path';
+import { backups } from './backup.ts';
 import { openDb } from './db.ts';
 import { newExercise, ValidationError } from './validate.ts';
 
 const PORT = Number(process.env.PORT ?? 3000);
 const DB_PATH = process.env.DB_PATH ?? resolve('data/fitness.db');
 const STATIC_DIR = resolve(process.env.STATIC_DIR ?? 'dist');
+const BACKUP_DIR = resolve(process.env.BACKUP_DIR ?? join(dirname(DB_PATH), 'backups'));
 
 const db = openDb(DB_PATH);
+const backup = backups(db.handle, BACKUP_DIR);
+backup.schedule((err) => console.error('Backup failed:', err));
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -54,6 +58,12 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
   if (method === 'GET' && path === '/api/health') return send(res, 200, { ok: true });
 
   if (method === 'GET' && path === '/api/state') return send(res, 200, db.state());
+
+  if (method === 'GET' && path === '/api/backups') return send(res, 200, backup.status());
+  if (method === 'POST' && path === '/api/backups') {
+    await backup.run();
+    return send(res, 200, backup.status());
+  }
 
   if (method === 'GET' && path === '/api/export') {
     res.setHeader('content-disposition', `attachment; filename="fitness-backup-${new Date().toISOString().slice(0, 10)}.json"`);
@@ -105,4 +115,4 @@ createServer(async (req, res) => {
     console.error(err);
     send(res, 500, { error: 'Internal error' });
   }
-}).listen(PORT, () => console.log(`Fitness tracker listening on :${PORT} (db: ${DB_PATH})`));
+}).listen(PORT, () => console.log(`Fitness tracker listening on :${PORT} (db: ${DB_PATH}, backups: ${BACKUP_DIR})`));

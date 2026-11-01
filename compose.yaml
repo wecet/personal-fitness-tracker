@@ -22,8 +22,13 @@ services:
     network_mode: service:tailscale
     depends_on:
       - tailscale
+    environment:
+      - BACKUP_DIR=/backups
     volumes:
       - app-data:/data
+      # Daily database copies (last 30), outside the Docker volume. Point
+      # BACKUP_HOST_DIR in .env at a synced folder, e.g. iCloud Drive.
+      - ${BACKUP_HOST_DIR:-./backups}:/backups
     restart: unless-stopped
 
 volumes:

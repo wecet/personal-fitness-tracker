@@ -17,7 +17,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+export interface BackupStatus {
+  latest: { file: string; at: string; bytes: number } | null;
+  count: number;
+  keep: number;
+}
+
 export const api = {
+  backups: () => request<BackupStatus>('/api/backups'),
+  backupNow: () => request<BackupStatus>('/api/backups', { method: 'POST' }),
   state: () => request<AppState>('/api/state'),
   sync: (ops: SyncOp[]) => request<SyncResult>('/api/sync', { method: 'POST', body: JSON.stringify({ ops }) }),
   addExercise: (exercise: NewExercise) =>

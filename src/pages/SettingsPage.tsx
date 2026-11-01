@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api, type BackupStatus } from '../api.ts';
 import { Icon } from '../components/Icon.tsx';
 import { PlateSheet } from '../components/PlateSheet.tsx';
-import { useData } from '../data.tsx';
+import { useData, useUi } from '../data.tsx';
 import { ScienceSection } from './ScienceSection.tsx';
 import { formatDuration, WEEKDAYS } from '../lib/stats.ts';
 import type { Settings } from '../../shared/types.ts';
@@ -27,6 +28,47 @@ function DayPicker({ label, hint, value, onChange }: {
       </div>
       <p className="muted small">{hint}</p>
     </div>
+  );
+}
+
+/** "today, 03:00" or "28 Oct, 03:00" */
+function when(iso: string) {
+  const d = new Date(iso);
+  const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  const today = d.toDateString() === new Date().toDateString();
+  return `${today ? 'today' : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}, ${time}`;
+}
+
+/** The server copies the database once a day; this shows the last copy and makes one on demand. */
+function BackupRow() {
+  const { notify } = useUi();
+  const [status, setStatus] = useState<BackupStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    api.backups().then(setStatus, () => {});
+  }, []);
+
+  async function backUp() {
+    setBusy(true);
+    try {
+      setStatus(await api.backupNow());
+      notify('Backed up');
+    } catch (err) {
+      notify((err as Error).message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const detail = !status ? 'Automatic daily backups' : status.latest ? `Last ${when(status.latest.at)} · ${status.count} kept` : 'No backups yet';
+  return (
+    <button className="tool-row" onClick={backUp} disabled={busy}>
+      <Icon name="shield" />
+      <span className="tool-text">
+        {busy ? 'Backing up…' : 'Back up now'}
+        <span className="muted small">{detail}</span>
+      </span>
+    </button>
   );
 }
 
@@ -58,7 +100,8 @@ export function SettingsPage() {
       <section className="card tools">
         <h3>Tools</h3>
         <button className="tool-row" onClick={() => setPlates(true)}><Icon name="plates" /> Plate calculator</button>
-        <a className="tool-row" href="/api/export" download><Icon name="download" /> Export backup (JSON)</a>
+        <BackupRow />
+        <a className="tool-row" href="/api/export" download><Icon name="download" /> Export data (JSON)</a>
       </section>
       <ScienceSection />
       {plates && <PlateSheet onClose={() => setPlates(false)} />}

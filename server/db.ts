@@ -110,6 +110,8 @@ export function openDb(path: string) {
   }
 
   return {
+    /** The open connection, for backups. */
+    handle: db,
     state,
 
     addExercise(input: NewExercise): Exercise {

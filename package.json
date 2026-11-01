@@ -12,7 +12,8 @@
     "dev:web": "vite",
     "build": "tsc --noEmit && vite build",
     "start": "node --disable-warning=ExperimentalWarning server/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test 'src/**/*.test.ts' 'server/**/*.test.ts'"
   },
   "dependencies": {},
   "devDependencies": {

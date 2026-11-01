@@ -24,7 +24,7 @@ A personal workout tracker that runs as a web app, built around both the gym and
 - **Progress:** per-exercise history with an estimated 1RM chart (3M / 6M / 1Y / All), best sets by rep count and the 8-week change; Personal Bests with a sparkline and trend per exercise; Bodyweight trend and Year in Review.
 - **Evidence-based estimates:** effort per set is inferred as reps in reserve from your estimated 1RM (Wathen), fatigue decays exponentially per muscle, weekly volume counts hard sets, and training load uses session-RPE with an EWMA acute:chronic ratio. Settings → How the numbers work lists the sources.
 - **Works offline:** changes save on the device and sync when you're back online.
-- **Export backup:** Settings → Tools downloads all your data as JSON.
+- **Backups:** daily database copies (to iCloud Drive if you like), plus a JSON export under Settings → Tools.
 
 ## Run locally (development)
 
@@ -36,6 +36,14 @@ npm run dev        # API on :3000, app on http://localhost:5173
 ```
 
 The SQLite database is written to `./data/fitness.db`.
+
+Run the tests (Node's built-in runner, no extra dependencies):
+
+```sh
+npm test
+```
+
+They cover the training maths (progression, trends, recovery, load, injuries, muscle regions), the server's validation and sync, and backups.
 
 ## Deploy with Docker + Tailscale
 
@@ -53,5 +61,14 @@ The SQLite database is written to `./data/fitness.db`.
 **Install on iPhone:** open the URL in Safari, then **Share → Add to Home Screen**. It launches full-screen like a native app.
 
 Data lives in the `app-data` Docker volume. To update after changing code, run `docker compose up -d --build`.
+
+**Backups:** the server copies the database once a day (and on demand from Settings → Tools → Back up now), keeping the last 30. Copies go to `./backups`, or to `BACKUP_HOST_DIR` in `.env`. Point that at iCloud Drive (`~/Library/Mobile Documents/com~apple~CloudDocs/Tempo Backups`) to keep them off this machine. To restore one:
+
+```sh
+docker compose stop app
+docker run --rm -v personal-fitness-tracker_app-data:/data -v "<backup folder>":/b alpine \
+  sh -c 'rm -f /data/fitness.db-wal /data/fitness.db-shm && cp /b/fitness-YYYY-MM-DD.db /data/fitness.db && chown 1000:1000 /data/fitness.db'
+docker compose start app
+```
 
 If Tailscale is already installed on the host, you can skip the sidecar. Run the `app` service with `ports: ["127.0.0.1:3000:3000"]` instead of `network_mode`, then run `tailscale serve --bg 3000`.

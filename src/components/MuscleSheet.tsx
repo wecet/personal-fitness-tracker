@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { MUSCLE_BY_ID, type MuscleId } from '../../shared/muscles.ts';
 import { EXERCISE_KINDS, EXERCISE_METRICS, type Exercise, type ExerciseKind, type ExerciseMetric } from '../../shared/types.ts';
 import { useData, useUi } from '../data.tsx';
@@ -7,7 +7,7 @@ import { groupByRegion } from '../lib/regions.ts';
 import { averageTrend, formatPct, progressSeries, trend, TREND_DAYS } from '../lib/trends.ts';
 import { exercisesFor, formatPb, formatSets, recoveryLabel } from '../lib/stats.ts';
 import { ExerciseLogger } from './ExerciseLogger.tsx';
-import { Icon } from './Icon.tsx';
+import { Icon, type IconName } from './Icon.tsx';
 import { MuscleDiagram } from './MuscleDiagram.tsx';
 import { Sheet } from './Sheet.tsx';
 
@@ -59,6 +59,40 @@ export function ExerciseRow({ exercise, open, onToggle, detail }: { exercise: Ex
   );
 }
 
+/** A collapsible group: just a heading row until opened. */
+function Fold({ id, open, onToggle, badge, title, hint, aside, children }: {
+  id: string;
+  open: boolean;
+  onToggle: () => void;
+  badge: ReactNode;
+  title: string;
+  hint: string;
+  aside?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section id={`fold-${id}`} className={`fold ${open ? 'open' : ''}`}>
+      <h3>
+        <button className="fold-head" aria-expanded={open} aria-controls={`fold-body-${id}`} onClick={onToggle}>
+          {badge}
+          <span className="fold-title">
+            {title}
+            <span className="muted small">{hint}</span>
+          </span>
+          {aside}
+          <span className="chevron" aria-hidden="true"><Icon name="chevron" size={18} /></span>
+        </button>
+      </h3>
+      <div className="fold-body" id={`fold-body-${id}`} inert={!open}>
+        <div>{children}</div>
+      </div>
+    </section>
+  );
+}
+
+const IconBadge = ({ name }: { name: IconName }) => <span className="region-number icon" aria-hidden="true"><Icon name={name} size={16} /></span>;
+const count = (n: number) => `${n} exercise${n === 1 ? '' : 's'}`;
+
 function AddExercise({ muscle }: { muscle: MuscleId }) {
   const { addExercise } = useData();
   const { notify } = useUi();
@@ -109,7 +143,7 @@ function AddExercise({ muscle }: { muscle: MuscleId }) {
 }
 
 export function MuscleSheet({ muscle, exerciseId, onClose }: { muscle: MuscleId; exerciseId?: number; onClose: () => void }) {
-  const { exercises, entries, fatigue, injuries, now } = useData();
+  const { exercises, entries, fatigue, injuries, now, exById } = useData();
   const { openInjury } = useUi();
   const [openId, setOpenId] = useState<number | null>(exerciseId ?? null);
   const info = MUSCLE_BY_ID[muscle];
@@ -129,8 +163,23 @@ export function MuscleSheet({ muscle, exerciseId, onClose }: { muscle: MuscleId;
       {list.map((ex) => <ExerciseRow key={ex.id} exercise={ex} open={openId === ex.id} onToggle={() => toggle(ex.id)} />)}
     </ul>
   );
+
+  // Every group starts folded except one: the exercise you came for, else the one you last trained here.
+  const folds: { id: string; list: Exercise[] }[] = [
+    ...groups.map((g) => ({ id: g.region.id, list: g.exercises })),
+    { id: 'other', list: other },
+    ...extras.map((g) => ({ id: g.kind, list: g.list })),
+    { id: 'assisting', list: assisting },
+  ];
+  const foldOf = (exId: number | undefined) => folds.find((f) => f.list.some((ex) => ex.id === exId))?.id ?? null;
+  const lastHere = entries.findLast((e) => exById.get(e.exerciseId)?.muscle === muscle)?.exerciseId;
+  const [openFold, setOpenFold] = useState<string | null>(() => foldOf(exerciseId) ?? foldOf(lastHere));
+  const fold = (id: string) => ({ id, open: openFold === id, onToggle: () => setOpenFold((cur) => (cur === id ? null : id)) });
+
+  /** Tapping a number on the diagram opens that region and brings it into view. */
   const pick = (regionId: string) => {
-    const group = document.getElementById(`region-${regionId}`);
+    setOpenFold(regionId);
+    const group = document.getElementById(`fold-${regionId}`);
     if (!group) return;
     group.scrollIntoView({ behavior: 'smooth', block: 'start' });
     group.classList.remove('flash');
@@ -154,50 +203,38 @@ export function MuscleSheet({ muscle, exerciseId, onClose }: { muscle: MuscleId;
         </button>
       )}
       <MuscleDiagram muscle={muscle} groups={groups} onPick={pick} />
-      {groups.map(({ region, number, exercises: list }) => {
-        const pct = regionTrend(list);
-        return (
-        <section key={region.id} id={`region-${region.id}`} className="region-group">
-          <h3 className="region-title">
-            <span className="region-number">{number}</span>
-            <span>{region.name}<span className="muted small">{region.hint}</span></span>
-            {pct != null && (
-              <span className={`region-trend trend ${pct > 0.005 ? 'up' : pct < -0.005 ? 'down' : ''}`} title={`Strength change over the last ${TREND_DAYS / 7} weeks`}>
-                {formatPct(pct)}<span className="muted small">{TREND_DAYS / 7} wk</span>
-              </span>
-            )}
-          </h3>
-          {list.length > 0 ? rows(list) : <p className="muted small">No exercises here yet — add your own below.</p>}
-        </section>
-        );
-      })}
-      {other.length > 0 && (
-        <section className="region-group">
-          <h3 className="section-title">Other</h3>
-          {rows(other)}
-        </section>
-      )}
-      {extras.map(({ kind, list }) => (
-        <section key={kind} className="kind-group">
-          <h3 className="section-title">{kind === 'plyometric' ? 'Plyometrics' : 'Mobility'}</h3>
-          <ul className="exercise-list">
-            {list.map((ex) => (
-              <ExerciseRow key={ex.id} exercise={ex} open={openId === ex.id} onToggle={() => toggle(ex.id)} />
-            ))}
-          </ul>
-        </section>
-      ))}
+      <div className="folds">
+        {groups.map(({ region, number, exercises: list }) => {
+          const pct = regionTrend(list);
+          return (
+            <Fold key={region.id} {...fold(region.id)} badge={<span className="region-number">{number}</span>}
+              title={region.name} hint={`${region.hint} · ${count(list.length)}`}
+              aside={pct != null && (
+                <span className={`region-trend trend ${pct > 0.005 ? 'up' : pct < -0.005 ? 'down' : ''}`} title={`Strength change over the last ${TREND_DAYS / 7} weeks`}>
+                  {formatPct(pct)}<span className="muted small">{TREND_DAYS / 7} wk</span>
+                </span>
+              )}>
+              {list.length > 0 ? rows(list) : <p className="muted small fold-empty">No exercises here yet — add your own below.</p>}
+            </Fold>
+          );
+        })}
+        {other.length > 0 && (
+          <Fold {...fold('other')} badge={<IconBadge name="list" />} title="Other" hint={count(other.length)}>{rows(other)}</Fold>
+        )}
+        {extras.map(({ kind, list }) => (
+          <Fold key={kind} {...fold(kind)} badge={<IconBadge name={kind === 'plyometric' ? 'jump' : 'stretch'} />}
+            title={kind === 'plyometric' ? 'Plyometrics' : 'Mobility'} hint={count(list.length)}>
+            {rows(list)}
+          </Fold>
+        ))}
+        {assisting.length > 0 && (
+          <Fold {...fold('assisting')} badge={<IconBadge name="plus" />} title={`Also works ${info.name.toLowerCase()}`}
+            hint={`${count(assisting.length)} where it helps`}>
+            {rows(assisting)}
+          </Fold>
+        )}
+      </div>
       <AddExercise muscle={muscle} />
-      {assisting.length > 0 && (
-        <details className="assisting" open={assisting.some((ex) => ex.id === exerciseId)}>
-          <summary>Also works {info.name.toLowerCase()} ({assisting.length})</summary>
-          <ul className="exercise-list">
-            {assisting.map((ex) => (
-              <ExerciseRow key={ex.id} exercise={ex} open={openId === ex.id} onToggle={() => toggle(ex.id)} />
-            ))}
-          </ul>
-        </details>
-      )}
     </Sheet>
   );
 }
