@@ -397,7 +397,7 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .summary-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .summary-stats div { display: flex; flex-direction: column; padding: 12px; border-radius: 12px; background: var(--surface-2); }
 .summary-stats strong { font-size: 17px; }
-.summary-stats span { font-size: 11px; color: var(--muted); }
+.summary-stats div > span { font-size: 11px; color: var(--muted); }
 @media (max-width: 380px) { .summary-stats { grid-template-columns: repeat(2, 1fr); } }
 .summary-prs { display: flex; flex-direction: column; gap: 8px; font-weight: 600; }
 .session-row { width: 100%; display: flex; align-items: center; gap: 8px; padding: 12px 0; text-align: left; border-bottom: 1px solid var(--border); }
@@ -410,7 +410,7 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; }
 .stat strong { font-size: 22px; line-height: 1.2; }
-.stat span { color: var(--muted); font-size: 13px; }
+.stat > span { color: var(--muted); font-size: 13px; }
 
 .cell { width: 12px; height: 12px; border-radius: 3px; display: block; padding: 0; }
 .l0 { background: var(--surface-2); }
@@ -465,7 +465,10 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .records button > span:first-child { flex: 1; font-weight: 600; min-width: 0; }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .chip.sore-1 { background: color-mix(in srgb, var(--fatigue) 18%, transparent); border-color: color-mix(in srgb, var(--fatigue) 40%, transparent); color: #ffb0b0; }
@@ -523,7 +526,7 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
 .zone-spike .zone-badge { color: var(--critical); background: color-mix(in srgb, var(--critical) 14%, transparent); }
 .load-split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .load-split div { display: flex; flex-direction: column; padding: 12px; border-radius: 12px; background: var(--surface-2); }
-.load-split span { font-size: 11px; color: var(--muted); }
+.load-split div > span { font-size: 11px; color: var(--muted); }
 .load-split .flag strong { color: var(--warning); }
 .explainer { margin: 0 4px; }
 
@@ -588,7 +591,7 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
   min-height: 44px; padding: 8px 12px 8px 16px; border-radius: 999px; font-size: 13px; color: var(--muted);
   background: var(--surface); border: 1px solid var(--border);
 }
-.today-line .md-tag { margin: 0; }
+.today-line .md-tag { margin: 0; flex-shrink: 0; white-space: nowrap; }
 .today-day { font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; font-size: 11px; color: var(--coral); }
 .today-text { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .today-line svg { flex-shrink: 0; }
@@ -778,3 +781,102 @@ main.with-session { padding-bottom: calc(var(--safe-bottom) + 110px); }
   width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center;
   border: 1.5px solid var(--coral); color: var(--text); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;
 }
+
+/* ---------- design polish ---------- */
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* Figures: fixed-width digits so counting never jitters, big and tight, with the unit set smaller. */
+.num, .stat strong, .summary-stats strong, .load-split strong, .stat-row strong, .hero-figure { font-variant-numeric: tabular-nums; }
+.stat strong, .stat-row strong { font-size: 26px; font-weight: 750; letter-spacing: -0.02em; line-height: 1.15; }
+.summary-stats strong, .load-split strong { font-size: 19px; font-weight: 750; letter-spacing: -0.01em; }
+.unit { font-size: 0.6em; font-weight: 600; letter-spacing: 0; color: var(--muted); }
+.hero-figure .unit { font-size: 0.4em; }
+/* Labels under figures: small caps. */
+.stat > span, .summary-stats div > span, .load-split div > span, .stat-row > div > span {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+/* Depth: a lit top edge and a faint sheen on raised surfaces. */
+.card:not(.review-hero), .stat, .today-line, .segmented, .tabs {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.03), transparent 48px);
+}
+.card, .stat, .today-line, .segmented, .tabs, .sheet {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 1px 2px rgb(0 0 0 / 0.25);
+}
+.today-line { background-color: color-mix(in srgb, var(--coral) 5%, var(--surface)); }
+/* Film grain over the background, beneath everything else. */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Press feedback: anything tappable gives a little under the finger. */
+.btn, .chip, .icon-btn, .text-tabs button, .segmented button, .tabs a, .today-line, .day, .quick-tile, .effort button, .day-picker button,
+.plan-list button, .records button, .protocol, .fold-head, .tool-row, .session-row, .search-results button, .injury-history button,
+.exercise-head, .drawer li a, .injury-banner, .rtp button {
+  transition: scale 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.15s, color 0.15s, border-color 0.15s, filter 0.15s, box-shadow 0.15s;
+}
+.btn:active, .chip:active, .icon-btn:active, .text-tabs button:active, .segmented button:active, .tabs a:active, .day:active:not(:disabled),
+.quick-tile:active, .effort button:active, .day-picker button:active { scale: 0.94; transition-duration: 0.08s; }
+/* Wide rows move less, or the edges travel too far. */
+.today-line:active, .plan-list button:active, .records button:active, .protocol:active, .fold-head:active, .tool-row:active,
+.session-row:active, .search-results button:active, .injury-history button:active, .exercise-head:active, .drawer li a:active,
+.injury-banner:active, .rtp button:active:not(:disabled) { scale: 0.98; transition-duration: 0.08s; }
+.btn:disabled:active, .icon-btn:disabled:active { scale: none; }
+
+/* Pages and sheets: content rises in, one block after another. */
+@keyframes rise { from { opacity: 0; translate: 0 14px; } }
+.page > *, .sheet-body > * { animation: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.page > :nth-child(2), .sheet-body > :nth-child(2) { animation-delay: 50ms; }
+.page > :nth-child(3), .sheet-body > :nth-child(3) { animation-delay: 100ms; }
+.page > :nth-child(4), .sheet-body > :nth-child(4) { animation-delay: 150ms; }
+.page > :nth-child(5), .sheet-body > :nth-child(5) { animation-delay: 200ms; }
+.page > :nth-child(n + 6), .sheet-body > :nth-child(n + 6) { animation-delay: 250ms; }
+.sheet-body > * { animation-duration: 0.4s; }
+
+/* Loading: shimmering placeholders in the shape of a page. */
+.skeleton-block { border-radius: var(--radius); background: var(--surface); position: relative; overflow: hidden; }
+.skeleton-block::after {
+  content: ''; position: absolute; inset: 0; translate: -100% 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.05), transparent);
+  animation: shimmer 1.3s ease-in-out infinite;
+}
+@keyframes shimmer { to { translate: 100% 0; } }
+
+/* ---------- living body map ---------- */
+
+/* Breathing: barely there, but the figure is never quite still. */
+.stage { animation: breathe 6s ease-in-out infinite; -webkit-touch-callout: none; }
+@keyframes breathe { 50% { scale: 1.012; } }
+/* Muscles settle in from head to toe. */
+.muscle { animation: muscle-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; animation-delay: calc(var(--i) * 45ms + 100ms); }
+@keyframes muscle-in { from { opacity: 0; } }
+.muscle-occlusion, .suggest-glow { pointer-events: none; }
+/* Each overlay washes in down the body; switching mode fades the old one out underneath. */
+.overlays .overlay { animation: overlay-in 0.7s ease-out backwards; animation-delay: calc(var(--i) * 40ms + 150ms); }
+.overlays.neglect .overlay { animation: overlay-in 0.7s ease-out backwards calc(var(--i) * 40ms + 150ms), glow 2.2s ease-in-out infinite; }
+@keyframes overlay-in { from { opacity: 0; } }
+.overlays.leaving { animation: fade-out 0.6s ease forwards; }
+@keyframes fade-out { to { opacity: 0; } }
+.suggest-glow path { fill: none; stroke: var(--coral); stroke-width: 2.2; stroke-linejoin: round; opacity: 0.55; animation: suggest 3s ease-in-out infinite; }
+@keyframes suggest { 50% { opacity: 0.2; } }
+.muscle.is-suggested .muscle-shape { stroke: var(--coral); stroke-width: 1; }
+
+.tap-ripple {
+  position: absolute; width: 96px; height: 96px; margin: -48px 0 0 -48px; border-radius: 50%; pointer-events: none;
+  border: 2px solid var(--coral); background: color-mix(in srgb, var(--coral) 18%, transparent);
+  animation: ripple 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+@keyframes ripple { from { scale: 0.15; opacity: 0.9; } to { scale: 1; opacity: 0; } }
+
+.peek {
+  position: absolute; z-index: 5; width: 216px; transform: translate(-50%, calc(-100% - 28px));
+  display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border-radius: 14px; font-size: 13px; pointer-events: none;
+  background: color-mix(in srgb, var(--surface-2) 94%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 14px 40px rgb(0 0 0 / 0.5);
+  animation: peek-in 0.22s cubic-bezier(0.3, 1.3, 0.5, 1);
+}
+.peek strong { font-size: 15px; }
+.peek-injury { color: var(--injury); font-weight: 600; }
+@keyframes peek-in { from { opacity: 0; scale: 0.9; } }

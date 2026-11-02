@@ -3,6 +3,7 @@ import { LineChart } from '../components/charts.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { useData } from '../data.tsx';
 import { dateKey, formatKg, parseDateKey } from '../lib/stats.ts';
+import { Num } from '../components/Num.tsx';
 
 const DAY = 86_400_000;
 const shortDate = (ms: number) => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
@@ -45,10 +46,10 @@ export function BodyweightPage() {
       </form>
 
       <div className="stats">
-        <div className="stat"><strong>{latest ? formatKg(latest.kg) : '—'}</strong><span>latest</span></div>
-        <div className="stat"><strong>{avg != null ? formatKg(Math.round(avg * 10) / 10) : '—'}</strong><span>7-day average</span></div>
+        <div className="stat"><strong><Num>{latest ? formatKg(latest.kg) : '—'}</Num></strong><span>latest</span></div>
+        <div className="stat"><strong><Num>{avg != null ? formatKg(Math.round(avg * 10) / 10) : '—'}</Num></strong><span>7-day average</span></div>
         <div className="stat">
-          <strong>{change != null ? `${change > 0 ? '+' : change < 0 ? '−' : '±'}${formatKg(Math.abs(Math.round(change * 10) / 10))}` : '—'}</strong>
+          <strong><Num>{change != null ? `${change > 0 ? '+' : change < 0 ? '−' : '±'}${formatKg(Math.abs(Math.round(change * 10) / 10))}` : '—'}</Num></strong>
           <span>vs 30 days ago</span>
         </div>
       </div>

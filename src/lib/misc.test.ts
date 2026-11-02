@@ -6,6 +6,7 @@ import { EXERCISES } from '../test/fixtures.ts';
 import { dateKey, parseDateKey } from './dates.ts';
 import { activityLoad, footballContext } from './football.ts';
 import { loadBar } from './plates.ts';
+import { formatNum, parseNumText } from './numText.ts';
 import { groupByRegion, REGIONS } from './regions.ts';
 
 describe('dates', () => {
@@ -74,5 +75,25 @@ describe('muscle regions', () => {
   it('numbers regions in order', () => {
     const { groups } = groupByRegion('chest', EXERCISES);
     assert.deepEqual(groups.map((g) => [g.number, g.region.id]), [[1, 'upper'], [2, 'mid'], [3, 'lower']]);
+  });
+});
+
+describe('count-up number text', () => {
+  it('splits a value into prefix, number and unit', () => {
+    assert.deepEqual(parseNumText('+82.5 kg'), { prefix: '+', value: 82.5, decimals: 1, grouped: false, magnitude: '', unit: ' kg' });
+    assert.deepEqual(parseNumText('1,204'), { prefix: '', value: 1204, decimals: 0, grouped: true, magnitude: '', unit: '' });
+    assert.equal(parseNumText('−2 kg')!.prefix, '−');
+    assert.equal(parseNumText('12 wk')!.unit, ' wk');
+    assert.deepEqual([parseNumText('1.8K AU')!.magnitude, parseNumText('1.8K AU')!.unit], ['K', ' AU']);
+    assert.equal(parseNumText('80 Kg')!.magnitude, '');
+  });
+
+  it('leaves text that isn’t a single number alone', () => {
+    for (const text of ['—', '1:05', '3 × 8', '', 'Hamstrings']) assert.equal(parseNumText(text), null, text);
+  });
+
+  it('formats mid-count values like the original', () => {
+    assert.equal(formatNum(1203.6, { decimals: 0, grouped: true }), '1,204');
+    assert.equal(formatNum(41.25, { decimals: 1, grouped: false }), '41.3');
   });
 });

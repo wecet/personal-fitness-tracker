@@ -6,6 +6,7 @@ import { useData, useUi } from '../data.tsx';
 import { groupByDay, level, type DayLog } from '../lib/days.ts';
 import { EFFORT_LABEL, FOOTBALL_LABEL } from '../lib/football.ts';
 import { dateKey, formatMinutes, formatSet, formatSets, parseDateKey, weekdayHabits, WEEKDAYS } from '../lib/stats.ts';
+import { Num } from '../components/Num.tsx';
 
 const DAY = 86_400_000;
 const WEEKS_SHOWN = 53;
@@ -262,9 +263,9 @@ export function TrackerPage() {
   return (
     <div className="page">
       <div className="stats">
-        <div className="stat"><strong>{thisWeek}</strong><span>this week</span></div>
-        <div className="stat"><strong>{daysSince(30)}</strong><span>last 30 days</span></div>
-        <div className="stat"><strong>{byDay.size}</strong><span>all time</span></div>
+        <div className="stat"><strong><Num>{thisWeek}</Num></strong><span>this week</span></div>
+        <div className="stat"><strong><Num>{daysSince(30)}</Num></strong><span>last 30 days</span></div>
+        <div className="stat"><strong><Num>{byDay.size}</Num></strong><span>all time</span></div>
       </div>
       <section className="card">
         <ContributionGraph byDay={byDay} selected={selected} onSelect={setSelected} />

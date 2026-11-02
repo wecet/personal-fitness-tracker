@@ -4,6 +4,7 @@ import { areaLabel, CONTEXT_LABEL, daysOut, injuryLabel, isActive, returnStages,
 import { haptic } from '../lib/haptics.ts';
 import { dateKey } from '../lib/stats.ts';
 import type { Injury } from '../../shared/types.ts';
+import { Num } from '../components/Num.tsx';
 
 const DAY = 86_400_000;
 
@@ -175,8 +176,8 @@ export function InjuriesPage() {
         <section className="card">
           <h3>Injury history</h3>
           <div className="stat-row">
-            <div><strong>{lastYear.length}</strong><span className="muted small">last 12 months</span></div>
-            <div><strong>{daysLost}</strong><span className="muted small">days out</span></div>
+            <div><strong><Num>{lastYear.length}</Num></strong><span className="muted small">last 12 months</span></div>
+            <div><strong><Num>{daysLost}</Num></strong><span className="muted small">days out</span></div>
             {common && common[1] > 1 && <div><strong>{common[0]}</strong><span className="muted small">most often</span></div>}
           </div>
           <InjuryTimeline injuries={injuries} />

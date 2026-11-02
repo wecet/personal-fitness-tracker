@@ -146,7 +146,9 @@ export function App() {
       <main className={inWorkout ? 'with-session' : ''}>
         {!state ? (
           status === 'syncing' ? (
-            <div className="page empty"><div className="spinner" /></div>
+            <div className="page" aria-busy="true" aria-label="Loading">
+              {[64, 180, 120, 120].map((h, i) => <div key={i} className="skeleton-block" style={{ height: h }} />)}
+            </div>
           ) : (
             <div className="page empty">
               <p>Couldn’t reach the server. Connect once to download your data — after that Tempo works offline.</p>

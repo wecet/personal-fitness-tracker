@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { LineChart, StackedColumns, compact } from '../components/charts.tsx';
 import { useData } from '../data.tsx';
 import { HIGH_MONOTONY, monotony, weeklyLoad, ZONE_LABEL, type LoadZone } from '../lib/load.ts';
+import { Num } from '../components/Num.tsx';
 
 const ZONE_ICON: Record<LoadZone, string> = { baseline: '…', low: '↓', sweet: '✓', caution: '!', spike: '⚠' };
 const ZONE_HINT: Record<LoadZone, string> = {
@@ -33,18 +34,18 @@ export function LoadPage() {
       <section className={`card load-hero zone-${load.zone}`}>
         <span className="eyebrow">Acute : chronic workload</span>
         <div className="load-hero-row">
-          <strong className="hero-figure">{load.ratio == null || load.zone === 'baseline' ? '—' : load.ratio.toFixed(2)}</strong>
+          <strong className="hero-figure"><Num>{load.ratio == null || load.zone === 'baseline' ? '—' : load.ratio.toFixed(2)}</Num></strong>
           <span className="zone-badge"><span aria-hidden="true">{ZONE_ICON[load.zone]}</span> {ZONE_LABEL[load.zone]}</span>
         </div>
         <p className="muted small">{ZONE_HINT[load.zone]}</p>
         <div className="load-split">
-          <div><strong>{au(load.acute)}</strong><span>acute (per week)</span></div>
-          <div><strong>{au(load.chronic)}</strong><span>chronic (per week)</span></div>
+          <div><strong><Num>{au(load.acute)}</Num></strong><span>acute (per week)</span></div>
+          <div><strong><Num>{au(load.chronic)}</Num></strong><span>chronic (per week)</span></div>
           <div className={mono.monotony != null && mono.monotony > HIGH_MONOTONY ? 'flag' : ''}>
-            <strong>{mono.monotony == null ? '—' : mono.monotony.toFixed(1)}</strong>
+            <strong><Num>{mono.monotony == null ? '—' : mono.monotony.toFixed(1)}</Num></strong>
             <span>monotony{mono.monotony != null && mono.monotony > HIGH_MONOTONY ? ' · vary days' : ''}</span>
           </div>
-          <div><strong>{mono.strain == null ? '—' : au(mono.strain)}</strong><span>strain (7 days)</span></div>
+          <div><strong><Num>{mono.strain == null ? '—' : au(mono.strain)}</Num></strong><span>strain (7 days)</span></div>
         </div>
       </section>
 

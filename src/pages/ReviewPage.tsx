@@ -4,6 +4,7 @@ import { StackedColumns } from '../components/charts.tsx';
 import { useData } from '../data.tsx';
 import { reviewYear, yearsWithData } from '../lib/review.ts';
 import { formatKg } from '../lib/stats.ts';
+import { Num } from '../components/Num.tsx';
 
 const MONTHS = Array.from({ length: 12 }, (_, m) => new Date(2000, m, 1).toLocaleDateString(undefined, { month: 'short' }));
 const round = (kg: number) => Math.round(kg * 2) / 2;
@@ -28,17 +29,17 @@ export function ReviewPage() {
 
       <section className="card review-hero">
         <span className="eyebrow">Your {year}</span>
-        <strong className="hero-figure">{r.activeDays}</strong>
+        <strong className="hero-figure"><Num>{r.activeDays}</Num></strong>
         <span className="muted">active days · {r.gymDays} in the gym, {r.football.sessions} on the pitch</span>
       </section>
 
       <div className="review-grid">
-        <div className="stat"><strong>{r.sets.toLocaleString()}</strong><span>sets</span></div>
-        <div className="stat"><strong>{tonnes >= 10 ? Math.round(tonnes).toLocaleString() : tonnes.toFixed(1)} t</strong><span>lifted</span></div>
-        <div className="stat"><strong>{r.pbs}</strong><span>PBs set</span></div>
-        <div className="stat"><strong>{r.longestWeekStreak} wk</strong><span>longest streak</span></div>
-        <div className="stat"><strong>{r.football.matches}</strong><span>matches</span></div>
-        <div className="stat"><strong>{Math.round(r.football.minutes / 60)} h</strong><span>of football</span></div>
+        <div className="stat"><strong><Num>{r.sets.toLocaleString()}</Num></strong><span>sets</span></div>
+        <div className="stat"><strong><Num>{`${tonnes >= 10 ? Math.round(tonnes).toLocaleString() : tonnes.toFixed(1)} t`}</Num></strong><span>lifted</span></div>
+        <div className="stat"><strong><Num>{r.pbs}</Num></strong><span>PBs set</span></div>
+        <div className="stat"><strong><Num>{`${r.longestWeekStreak} wk`}</Num></strong><span>longest streak</span></div>
+        <div className="stat"><strong><Num>{r.football.matches}</Num></strong><span>matches</span></div>
+        <div className="stat"><strong><Num>{`${Math.round(r.football.minutes / 60)} h`}</Num></strong><span>of football</span></div>
       </div>
 
       {(r.favourite || r.biggestLift || r.mostImproved) && (

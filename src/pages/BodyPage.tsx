@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MUSCLES, type MuscleId } from '../../shared/muscles.ts';
+import { MUSCLE_BY_ID, MUSCLES, type MuscleId } from '../../shared/muscles.ts';
 import { BodyMap, type OverlayTone, type Side } from '../components/BodyMap.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { useData, useUi } from '../data.tsx';
@@ -21,6 +21,10 @@ const DAY = 86_400_000;
 /** How far back the volume replay reaches, and how long each week stays on screen. */
 const REPLAY_WEEKS = 12;
 const REPLAY_STEP_MS = 900;
+
+/** "18h" under a day, then "2 days". */
+const timeLeft = (hours: number) => (hours < 24 ? `${Math.ceil(hours)}h` : `${Math.round(hours / 24)} day${Math.round(hours / 24) === 1 ? '' : 's'}`);
+const ago = (days: number) => (days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`);
 
 const dayMonth = (ms: number) => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
@@ -90,6 +94,24 @@ export function BodyPage() {
     return out;
   }, [mode, fatigue, volume, since]);
 
+  const peek = (m: MuscleId) => {
+    const hoursLeft = fatigue.get(m)?.hoursLeft ?? 0;
+    const days = since.get(m);
+    const sets = volume.get(m) ?? 0;
+    const hurt = injured.has(m);
+    return (
+      <>
+        <strong>{MUSCLE_BY_ID[m].name}</strong>
+        <span className={`status ${hoursLeft > 0 ? 'recovering' : 'ready'}`}>
+          {hoursLeft > 0 ? `Recovering · ${timeLeft(hoursLeft)} left` : 'Ready to train'}
+        </span>
+        <span className="muted">{days == null ? 'Not trained yet' : `Last trained ${ago(days)}`}</span>
+        <span className="muted">{`${Math.round(sets * 10) / 10} hard sets ${back ? 'that week' : 'this week'}`}</span>
+        {hurt && <span className="peek-injury">Injured</span>}
+      </>
+    );
+  };
+
   const recovering = MUSCLES.filter((m) => (fatigue.get(m.id)?.hoursLeft ?? 0) > 0)
     .sort((a, b) => fatigue.get(b.id)!.hoursLeft - fatigue.get(a.id)!.hoursLeft)
     .map((m) => m.id);
@@ -118,7 +140,7 @@ export function BodyPage() {
       </button>
 
       <BodyMap overlay={overlay} tone={MODES.find((m) => m.id === mode)!.tone} suggested={mode === 'recovery' ? rec.muscles : []} injured={injured}
-        onSelect={(m) => openMuscle(m)} side={side} onSideChange={setSide} />
+        onSelect={(m) => openMuscle(m)} side={side} onSideChange={setSide} peek={peek} />
 
       <div className="home-controls">
         <div className="text-tabs" role="tablist" aria-label="Body map view">

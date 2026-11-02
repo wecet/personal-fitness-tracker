@@ -5,6 +5,7 @@ import { bestSet, estimate1RM, formatDuration, formatKg, formatPb, formatSet, fo
 import { bestSoFar, chartViews, formatChange, repMaxes, topSet, trend, TREND_DAYS, VIEW_LABEL, viewSeries, type ChartView } from '../lib/trends.ts';
 import { LineChart, type LinePoint } from './charts.tsx';
 import { Sheet } from './Sheet.tsx';
+import { Num } from './Num.tsx';
 
 const DAY = 86_400_000;
 const shortDate = (ms: number) => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
@@ -77,15 +78,15 @@ export function HistorySheet({ exerciseId, onClose }: { exerciseId: number; onCl
       onClose={onClose}
     >
       <div className="summary-stats">
-        <div><strong>{pb ? formatPb(pb, ex.metric) : '—'}</strong><span>personal best</span></div>
-        {best1RM != null && <div><strong>{formatKg(Math.round(best1RM * 2) / 2)}</strong><span>est. 1RM</span></div>}
+        <div><strong><Num>{pb ? formatPb(pb, ex.metric) : '—'}</Num></strong><span>personal best</span></div>
+        {best1RM != null && <div><strong><Num>{formatKg(Math.round(best1RM * 2) / 2)}</Num></strong><span>est. 1RM</span></div>}
         <div>
           <strong className={lately ? (lately.change > 0 ? 'up' : lately.change < 0 ? 'down' : '') : ''} title={VIEW_LABEL[view]}>
             {lately ? formatChange(lately.change, series.unit) : '—'}
           </strong>
           <span>last {TREND_DAYS / 7} weeks</span>
         </div>
-        <div><strong>{mine.filter((e) => prEntryIds.has(e.id)).length}</strong><span>PBs set</span></div>
+        <div><strong><Num>{mine.filter((e) => prEntryIds.has(e.id)).length}</Num></strong><span>PBs set</span></div>
       </div>
 
       {series.points.length > 1 ? (

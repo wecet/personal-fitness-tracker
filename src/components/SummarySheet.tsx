@@ -5,6 +5,7 @@ import { EFFORT_LABEL } from '../lib/football.ts';
 import { refreshFromSession, routineFromSession } from '../lib/routines.ts';
 import { entryVolume, formatMinutes, formatPb } from '../lib/stats.ts';
 import { Sheet } from './Sheet.tsx';
+import { Num } from './Num.tsx';
 
 export function SummarySheet({ sessionId, onClose }: { sessionId: string; onClose: () => void }) {
   const { sessions, entries, exById, prEntryIds, pbs, put, remove, now, routines } = useData();
@@ -41,9 +42,9 @@ export function SummarySheet({ sessionId, onClose }: { sessionId: string; onClos
     <Sheet title={finished ? 'Workout' : 'Finish workout'} subtitle={new Date(session.startedAt).toLocaleString(undefined, { weekday: 'long', hour: '2-digit', minute: '2-digit' })} onClose={onClose}>
       <div className="summary-stats">
         <div><strong>{formatMinutes(minutes)}</strong><span>duration</span></div>
-        <div><strong>{sets}</strong><span>sets</span></div>
-        <div><strong>{volume >= 1000 ? `${(volume / 1000).toFixed(1)} t` : `${Math.round(volume)} kg`}</strong><span>volume</span></div>
-        <div><strong>{prs.length}</strong><span>PBs</span></div>
+        <div><strong><Num>{sets}</Num></strong><span>sets</span></div>
+        <div><strong><Num>{volume >= 1000 ? `${(volume / 1000).toFixed(1)} t` : `${Math.round(volume)} kg`}</Num></strong><span>volume</span></div>
+        <div><strong><Num>{prs.length}</Num></strong><span>PBs</span></div>
       </div>
 
       {prs.length > 0 && (
