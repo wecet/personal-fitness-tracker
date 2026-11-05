@@ -126,6 +126,11 @@ main { max-width: 980px; margin: 0 auto; padding: 0 var(--gutter) calc(var(--saf
 .drawer li a:hover, .drawer-foot:hover { background: var(--surface-2); }
 .drawer li a.active, .drawer-foot.active { background: color-mix(in srgb, var(--coral) 16%, transparent); color: var(--coral); }
 .drawer-foot { margin-top: auto; color: var(--muted); font-size: 13px; }
+.drawer-foot-group { margin-top: auto; display: flex; flex-direction: column; gap: 4px; padding-top: 8px; border-top: 1px solid var(--border); }
+.drawer-foot-group .drawer-foot { margin-top: 0; }
+.drawer-logout { width: 100%; text-align: left; }
+.drawer-account { display: flex; flex-direction: column; min-width: 0; }
+.drawer-email { font-size: 11px; opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- shared pieces ---------- */
 

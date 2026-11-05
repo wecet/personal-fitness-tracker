@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { auth, NetworkError, setSignedOutHandler, type User } from './api.ts';
 import { App } from './App.tsx';
 import { Brand } from './components/Brand.tsx';
@@ -29,6 +29,20 @@ export function useAccount(): Account {
   const value = useContext(AccountCtx);
   if (!value) throw new Error('useAccount must be used while signed in');
   return value;
+}
+
+/** Log out, first warning if changes made on this device haven't reached the server. */
+export function useLogOut() {
+  const { signOut } = useAccount();
+  const { pending } = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const [busy, setBusy] = useState(false);
+  const logOut = async () => {
+    // Unsynced changes live only on this device and are cleared when signing out.
+    if (pending > 0 && !confirm(`${pending} change${pending === 1 ? '' : 's'} haven’t synced yet and will be lost if you log out now. Log out anyway?`)) return;
+    setBusy(true);
+    await signOut();
+  };
+  return { logOut, busy };
 }
 
 export function Root() {

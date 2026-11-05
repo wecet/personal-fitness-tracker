@@ -1,7 +1,6 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
 import { api, type BackupStatus } from '../api.ts';
-import { useAccount } from '../auth.tsx';
-import { store } from '../lib/store.ts';
+import { useAccount, useLogOut } from '../auth.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { PlateSheet } from '../components/PlateSheet.tsx';
 import { useData, useUi } from '../data.tsx';
@@ -75,15 +74,8 @@ function BackupRow() {
 }
 
 function AccountCard() {
-  const { user, signOut } = useAccount();
-  const { pending } = useSyncExternalStore(store.subscribe, store.getSnapshot);
-  const [busy, setBusy] = useState(false);
-  const logOut = async () => {
-    // Unsynced changes live only on this device and are cleared when signing out.
-    if (pending > 0 && !confirm(`${pending} change${pending === 1 ? '' : 's'} haven’t synced yet and will be lost if you log out now. Log out anyway?`)) return;
-    setBusy(true);
-    await signOut();
-  };
+  const { user } = useAccount();
+  const { logOut, busy } = useLogOut();
   return (
     <section className="card account-card">
       <div className="account-row">

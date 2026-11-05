@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useAccount, useLogOut } from '../auth.tsx';
 import { Brand } from './Brand.tsx';
 import { Icon, type IconName } from './Icon.tsx';
 
@@ -17,6 +18,8 @@ const MAIN = ROUTES.filter((r) => r.id !== 'settings');
 const href = (r: Route) => `#/${r === 'body' ? '' : r}`;
 
 export function Drawer({ open, route, onClose }: { open: boolean; route: Route; onClose: () => void }) {
+  const { user } = useAccount();
+  const { logOut, busy } = useLogOut();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -40,9 +43,18 @@ export function Drawer({ open, route, onClose }: { open: boolean; route: Route; 
             </li>
           ))}
         </ul>
-        <a className={`drawer-foot ${route === 'settings' ? 'active' : ''}`} href={href('settings')} onClick={onClose}>
-          <Icon name="settings" size={18} /> Settings
-        </a>
+        <div className="drawer-foot-group">
+          <a className={`drawer-foot ${route === 'settings' ? 'active' : ''}`} href={href('settings')} onClick={onClose}>
+            <Icon name="settings" size={18} /> Settings
+          </a>
+          <button className="drawer-foot drawer-logout" onClick={logOut} disabled={busy}>
+            <Icon name="logout" size={18} />
+            <span className="drawer-account">
+              <span>{busy ? 'Logging out…' : 'Log out'}</span>
+              <span className="drawer-email">{user.email}</span>
+            </span>
+          </button>
+        </div>
       </nav>
     </>
   );
