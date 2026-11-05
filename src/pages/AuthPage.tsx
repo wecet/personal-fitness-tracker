@@ -128,7 +128,7 @@ export function AuthPage({ mode: initialMode = 'signin', token, offline, onSigne
 
   return (
     <div className={`auth ${leaving ? 'leaving' : ''}`}>
-      <div className="auth-aurora" aria-hidden="true"><span /><span /><span /></div>
+      <div className="auth-aurora" aria-hidden="true"><span /><span /><span /><span /><span /></div>
       <main className="auth-main">
         <header className="auth-brand">
           <BrandMark />

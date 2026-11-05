@@ -895,15 +895,35 @@ body::before {
   position: relative; isolation: isolate; overflow: hidden; min-height: 100svh;
   display: grid; place-items: center; padding: calc(var(--safe-top) + 24px) var(--gutter) calc(var(--safe-bottom) + 24px);
 }
-/* Slow-drifting light behind the card: the app's three colours, heavily blurred. */
-.auth-aurora { position: absolute; inset: 0; z-index: -1; filter: blur(70px); opacity: 0.5; transition: opacity 0.42s; pointer-events: none; }
-.auth-aurora span { position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%; }
-.auth-aurora span:nth-child(1) { left: -35vmax; top: -30vmax; background: radial-gradient(closest-side, var(--coral), transparent); animation: drift-a 19s ease-in-out infinite alternate; }
-.auth-aurora span:nth-child(2) { right: -40vmax; bottom: -35vmax; background: radial-gradient(closest-side, var(--amber), transparent); opacity: 0.55; animation: drift-b 23s ease-in-out infinite alternate; }
-.auth-aurora span:nth-child(3) { right: -30vmax; top: -10vmax; background: radial-gradient(closest-side, var(--football), transparent); opacity: 0.35; animation: drift-c 29s ease-in-out infinite alternate; }
-@keyframes drift-a { to { translate: 22vmax 18vmax; scale: 1.15; } }
-@keyframes drift-b { to { translate: -18vmax -22vmax; scale: 0.9; } }
-@keyframes drift-c { to { translate: -26vmax 30vmax; scale: 1.2; } }
+/*
+ * Lava lamp behind the card: soft blobs in the app's colours rise and sink at
+ * different speeds, change shape as they go, and blend where they meet.
+ */
+.auth-aurora { position: absolute; inset: -10%; z-index: -1; filter: blur(40px) saturate(1.35); opacity: 0.9; transition: opacity 0.42s; pointer-events: none; }
+.auth-aurora span {
+  position: absolute; width: var(--size); height: var(--size); left: var(--x); bottom: -20%;
+  border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; mix-blend-mode: screen;
+  background: radial-gradient(circle at 35% 35%, var(--c), color-mix(in srgb, var(--c) 40%, transparent) 60%, transparent 72%);
+  animation: lava var(--rise) ease-in-out infinite alternate, blob var(--morph) ease-in-out infinite alternate;
+  animation-delay: var(--delay), calc(var(--delay) / 2);
+}
+.auth-aurora span:nth-child(1) { --c: var(--coral); --size: 62vmin; --x: -8%; --rise: 17s; --morph: 9s; --delay: -4s; }
+.auth-aurora span:nth-child(2) { --c: var(--amber); --size: 48vmin; --x: 48%; --rise: 21s; --morph: 11s; --delay: -13s; opacity: 0.75; }
+.auth-aurora span:nth-child(3) { --c: var(--football); --size: 54vmin; --x: 62%; --rise: 25s; --morph: 13s; --delay: -6s; opacity: 0.55; }
+.auth-aurora span:nth-child(4) { --c: #e0456b; --size: 40vmin; --x: 18%; --rise: 14s; --morph: 8s; --delay: -10s; opacity: 0.7; }
+.auth-aurora span:nth-child(5) { --c: var(--coral-strong); --size: 34vmin; --x: 70%; --rise: 19s; --morph: 10s; --delay: -2s; opacity: 0.6; }
+/* Up from below the screen to above the card, drifting sideways and swelling on the way. */
+@keyframes lava {
+  0% { translate: 0 0; scale: 0.9; }
+  35% { translate: 6vw -48vh; scale: 1.1; }
+  70% { translate: -5vw -88vh; scale: 1; }
+  100% { translate: 3vw -118vh; scale: 0.85; }
+}
+@keyframes blob {
+  0% { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; rotate: 0deg; }
+  50% { border-radius: 63% 37% 38% 62% / 55% 61% 39% 45%; rotate: 70deg; }
+  100% { border-radius: 36% 64% 52% 48% / 62% 35% 65% 38%; rotate: 150deg; }
+}
 
 .auth-main { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 28px; }
 .auth-brand { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
