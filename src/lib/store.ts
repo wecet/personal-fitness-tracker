@@ -1,4 +1,4 @@
-import { api, NetworkError } from '../api.ts';
+import { api, NetworkError, SignedOutError } from '../api.ts';
 import { emptyRecords, type AppState, type SyncOp } from '../../shared/types.ts';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
@@ -38,6 +38,8 @@ const normalise = (s: AppState): AppState => ({ ...s, records: { ...emptyRecords
  * appear instantly and are pushed whenever the network allows.
  */
 class SyncStore {
+  /** Whose data this is. The saved copy is only reused by the same account. */
+  private owner: string | null = null;
   private server: AppState | null = null;
   private outbox: SyncOp[] = [];
   private status: SyncStatus = 'syncing';
@@ -48,19 +50,42 @@ class SyncStore {
   onRejected: (errors: string[]) => void = () => {};
 
   constructor() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => this.flush());
+      document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && this.flush());
+    }
+  }
+
+  /** Loads this account's saved copy (if it's theirs) and starts syncing. */
+  start(userId: string) {
+    if (this.owner === userId) return;
+    this.owner = userId;
+    this.server = null;
+    this.outbox = [];
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
-      if (saved) {
+      // Copies saved before accounts existed have no owner; they're the first account's.
+      if (saved && (saved.owner === userId || saved.owner === undefined)) {
         this.server = saved.server && normalise(saved.server);
         this.outbox = saved.outbox ?? [];
       }
     } catch {}
     this.refresh();
-    if (typeof window !== 'undefined') {
-      window.addEventListener('online', () => this.flush());
-      document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && this.flush());
-      void this.flush();
-    }
+    void this.flush();
+  }
+
+  /** Forgets everything on this device, for signing out. */
+  stop() {
+    this.owner = null;
+    this.server = null;
+    this.outbox = [];
+    this.status = 'syncing';
+    clearTimeout(this.retryTimer);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+    this.snapshot = { state: null, pending: 0, status: 'syncing' };
+    this.listeners.forEach((fn) => fn());
   }
 
   subscribe = (fn: () => void) => {
@@ -77,7 +102,7 @@ class SyncStore {
       status: this.status,
     };
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ server: this.server, outbox: this.outbox }));
+      if (this.owner) localStorage.setItem(STORAGE_KEY, JSON.stringify({ owner: this.owner, server: this.server, outbox: this.outbox }));
     } catch {}
     this.listeners.forEach((fn) => fn());
   }
@@ -96,18 +121,23 @@ class SyncStore {
   }
 
   async flush() {
-    if (this.flushing) return;
+    if (this.flushing || !this.owner) return;
+    const owner = this.owner;
     this.flushing = true;
     clearTimeout(this.retryTimer);
     this.status = 'syncing';
     this.refresh();
     try {
       while (true) {
+        if (this.owner !== owner) return;
         const batch = this.outbox.slice();
         if (batch.length === 0) {
-          this.server = normalise(await api.state());
+          const state = await api.state();
+          if (this.owner !== owner) return;
+          this.server = normalise(state);
         } else {
           const result = await api.sync(batch);
+          if (this.owner !== owner) return;
           this.server = normalise(result.state);
           this.outbox = this.outbox.slice(batch.length);
           if (result.rejected.length) this.onRejected(result.rejected.map((r) => r.error));
@@ -116,11 +146,13 @@ class SyncStore {
       }
       this.status = 'synced';
     } catch (err) {
+      // Signed out: the app is already heading back to the sign-in page.
+      if (err instanceof SignedOutError || this.owner !== owner) return;
       this.status = err instanceof NetworkError ? 'offline' : 'error';
       this.retryTimer = setTimeout(() => this.flush(), RETRY_MS);
     } finally {
       this.flushing = false;
-      this.refresh();
+      if (this.owner === owner) this.refresh();
     }
   }
 }

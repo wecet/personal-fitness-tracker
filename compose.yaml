@@ -24,6 +24,13 @@ services:
       - tailscale
     environment:
       - BACKUP_DIR=/backups
+      # Reset links point here. Password-reset email goes out through Gmail when
+      # SMTP_USER and SMTP_PASS are set (see .env.example); otherwise the link is
+      # written to this container's log.
+      - APP_URL=${APP_URL:-}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
     volumes:
       - app-data:/data
       # Daily database copies (last 30), outside the Docker volume. Point

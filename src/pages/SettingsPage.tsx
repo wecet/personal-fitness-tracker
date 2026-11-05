@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { api, type BackupStatus } from '../api.ts';
+import { useAccount } from '../auth.tsx';
+import { store } from '../lib/store.ts';
 import { Icon } from '../components/Icon.tsx';
 import { PlateSheet } from '../components/PlateSheet.tsx';
 import { useData, useUi } from '../data.tsx';
@@ -72,6 +74,30 @@ function BackupRow() {
   );
 }
 
+function AccountCard() {
+  const { user, signOut } = useAccount();
+  const { pending } = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const [busy, setBusy] = useState(false);
+  const logOut = async () => {
+    // Unsynced changes live only on this device and are cleared when signing out.
+    if (pending > 0 && !confirm(`${pending} change${pending === 1 ? '' : 's'} haven’t synced yet and will be lost if you log out now. Log out anyway?`)) return;
+    setBusy(true);
+    await signOut();
+  };
+  return (
+    <section className="card account-card">
+      <div className="account-row">
+        <span className="account-avatar" aria-hidden="true">{user.email[0].toUpperCase()}</span>
+        <span className="tool-text">
+          <span className="small muted">Signed in as</span>
+          <strong className="account-email">{user.email}</strong>
+        </span>
+        <button className="btn ghost" onClick={logOut} disabled={busy}>{busy ? 'Logging out…' : 'Log out'}</button>
+      </div>
+    </section>
+  );
+}
+
 export function SettingsPage() {
   const { settings, put } = useData();
   const update = (patch: Partial<Settings>) => put('settings', { ...settings, ...patch });
@@ -79,6 +105,7 @@ export function SettingsPage() {
 
   return (
     <div className="page">
+      <AccountCard />
       <section className="card">
         <h3>Football schedule</h3>
         <p className="muted small">Tempo plans your gym days around these — no heavy legs the day before or after a match, or on training days.</p>

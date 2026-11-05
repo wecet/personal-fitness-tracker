@@ -2,7 +2,7 @@
 
 # Tempo
 
-A personal workout tracker that runs as a web app, built around both the gym and football. Tap a muscle on the body map to log sets, track PBs, and watch the red recovery fill fade. It's self-hosted with Docker and only reachable from your own devices over Tailscale.
+A personal workout tracker that runs as a web app, built around both the gym and football. Tap a muscle on the body map to log sets, track PBs, and watch the red recovery fill fade. It's self-hosted with Docker and only reachable from your own devices over Tailscale. Each person signs in with their own account and sees only their own data.
 
 ## Features
 
@@ -26,7 +26,8 @@ A personal workout tracker that runs as a web app, built around both the gym and
   - **PBs:** every exercise with its personal best, a sparkline and its recent trend.
   - **Load, Bodyweight and Year in Review** tabs.
 - **Evidence-based estimates:** effort per set is inferred as reps in reserve from your estimated 1RM (Wathen), fatigue decays exponentially per muscle, weekly volume counts hard sets, and training load uses session-RPE with an EWMA acute:chronic ratio. Settings → How the numbers work lists the sources.
-- **Works offline:** changes save on the device and sync when you're back online.
+- **Accounts:** sign in with email and password, or create an account; everyone's workouts, injuries, routines, settings and custom exercises are kept separate. Forgot your password? A reset link is emailed (it works once, for an hour) and signs you out everywhere else. Settings shows who's signed in and has Log out.
+- **Works offline:** changes save on the device and sync when you're back online. Once you've signed in on a device, Tempo opens straight away even without a connection.
 - **Backups:** daily database copies (to iCloud Drive if you like), plus a JSON export under Settings → Tools.
 
 ## Run locally (development)
@@ -46,7 +47,9 @@ Run the tests (Node's built-in runner, no extra dependencies):
 npm test
 ```
 
-They cover the training maths (progression, trends, recovery, load, injuries, muscle regions), the server's validation and sync, and backups.
+They cover the training maths (progression, trends, recovery, load, injuries, muscle regions), the server's validation and sync, accounts (separate data, sign-in, sessions, password resets, upgrading a single-user database), the reset email and backups.
+
+In development, password reset links are printed in the API's terminal instead of emailed.
 
 ## Deploy with Docker + Tailscale
 
@@ -64,6 +67,16 @@ They cover the training maths (progression, trends, recovery, load, injuries, mu
 **Install on iPhone:** open the URL in Safari, then **Share → Add to Home Screen**. It launches full-screen like a native app.
 
 Data lives in the `app-data` Docker volume. To update after changing code, run `docker compose up -d --build`.
+
+**Accounts:** the first account created takes over everything logged before accounts existed. Create it in the app (Create account), or from the host:
+
+```sh
+echo 'your password' | docker compose exec -T app node server/cli.ts create-user you@example.com
+```
+
+Anyone who can reach the URL can create an account; with Tailscale that's only devices on your tailnet. Passwords are hashed with scrypt; sessions last 90 days from last use.
+
+**Password reset email:** set `APP_URL`, `SMTP_USER` (your Gmail address) and `SMTP_PASS` (a [Google app password](https://myaccount.google.com/apppasswords), which needs 2-Step Verification) in `.env`, then `docker compose up -d`. Until they're set, reset links are written to the log instead: `docker compose logs app | grep "Password reset"`. Any SMTP server that takes AUTH PLAIN over TLS on port 465 works too: set `SMTP_HOST` as well.
 
 **Backups:** the server copies the database once a day (and on demand from Settings → Tools → Back up now), keeping the last 30. Copies go to `./backups`, or to `BACKUP_HOST_DIR` in `.env`. Point that at iCloud Drive (`~/Library/Mobile Documents/com~apple~CloudDocs/Tempo Backups`) to keep them off this machine. To restore one:
 
