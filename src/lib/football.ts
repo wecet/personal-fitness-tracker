@@ -5,11 +5,9 @@ import { dateKey } from './dates.ts';
 export const FOOTBALL_LABEL: Record<FootballType, string> = {
   match: 'Match',
   training: 'Training',
-  futsal: 'Futsal',
-  drills: 'Solo drills',
 };
 
-export const DEFAULT_MINUTES: Record<FootballType, number> = { match: 90, training: 75, futsal: 50, drills: 45 };
+export const DEFAULT_MINUTES: Record<FootballType, number> = { match: 90, training: 75 };
 
 export const EFFORT_LABEL = ['', 'Very easy', 'Easy', 'Light', 'Moderate', 'Steady', 'Hard', 'Very hard', 'Tough', 'Brutal', 'Left everything out there'];
 

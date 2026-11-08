@@ -73,9 +73,9 @@ export interface Routine {
   createdAt: string;
 }
 
-export type FootballType = 'match' | 'training' | 'futsal' | 'drills';
+export type FootballType = 'match' | 'training';
 
-export const FOOTBALL_TYPES: FootballType[] = ['match', 'training', 'futsal', 'drills'];
+export const FOOTBALL_TYPES: FootballType[] = ['match', 'training'];
 
 export interface Activity {
   id: string;
