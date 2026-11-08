@@ -76,6 +76,7 @@ class SyncStore {
 
   /** Forgets everything on this device, for signing out. */
   stop() {
+    this.built = null;
     this.owner = null;
     this.server = null;
     this.outbox = [];
@@ -95,16 +96,32 @@ class SyncStore {
 
   getSnapshot = () => this.snapshot;
 
+  /** What the current state was built from, so an unchanged sync doesn't redraw the app. */
+  private built: { server: AppState | null; outbox: SyncOp[]; pending: number } | null = null;
+
   private refresh() {
+    const b = this.built;
+    const same = !!b && b.server === this.server && b.outbox === this.outbox && b.pending === this.outbox.length;
+    if (same && this.snapshot.status === this.status) return;
     this.snapshot = {
-      state: this.server && applyOps(this.server, this.outbox),
+      state: same ? this.snapshot.state : this.server && applyOps(this.server, this.outbox),
       pending: this.outbox.length,
       status: this.status,
     };
-    try {
-      if (this.owner) localStorage.setItem(STORAGE_KEY, JSON.stringify({ owner: this.owner, server: this.server, outbox: this.outbox }));
-    } catch {}
+    if (!same) {
+      this.built = { server: this.server, outbox: this.outbox, pending: this.outbox.length };
+      try {
+        if (this.owner) localStorage.setItem(STORAGE_KEY, JSON.stringify({ owner: this.owner, server: this.server, outbox: this.outbox }));
+      } catch {}
+    }
     this.listeners.forEach((fn) => fn());
+  }
+
+  /** Keeps the current copy when the server sent back exactly the same data. */
+  private receive(state: AppState) {
+    const next = normalise(state);
+    if (this.server && JSON.stringify(next) === JSON.stringify(this.server)) return;
+    this.server = next;
   }
 
   /** Custom exercises are created online (they get server ids); show them without waiting for a refetch. */
@@ -134,11 +151,11 @@ class SyncStore {
         if (batch.length === 0) {
           const state = await api.state();
           if (this.owner !== owner) return;
-          this.server = normalise(state);
+          this.receive(state);
         } else {
           const result = await api.sync(batch);
           if (this.owner !== owner) return;
-          this.server = normalise(result.state);
+          this.receive(result.state);
           this.outbox = this.outbox.slice(batch.length);
           if (result.rejected.length) this.onRejected(result.rejected.map((r) => r.error));
         }

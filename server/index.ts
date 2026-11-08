@@ -1,8 +1,10 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { readFileSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { accounts, AuthError, limiter, SESSION_DAYS, type User } from './accounts.ts';
 import { backups } from './backup.ts';
+import { compress, pickEncoding, staticCache, worthCompressing } from './compress.ts';
 import { openDb } from './db.ts';
 import { resetEmail } from './emails.ts';
 import { mailConfigFromEnv, sendMail } from './mail.ts';
@@ -54,8 +56,14 @@ class HttpError extends Error {
 }
 
 function send(res: ServerResponse, status: number, body: unknown) {
-  res.writeHead(status, { 'content-type': 'application/json' });
-  res.end(JSON.stringify(body));
+  const json = Buffer.from(JSON.stringify(body));
+  const encoding = worthCompressing('application/json', json.length) ? pickEncoding(res.req?.headers['accept-encoding']) : null;
+  res.writeHead(status, {
+    'content-type': 'application/json',
+    vary: 'accept-encoding',
+    ...(encoding && { 'content-encoding': encoding }),
+  });
+  res.end(encoding ? compress(json, encoding) : json);
 }
 
 async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
@@ -206,15 +214,24 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, path: string
   throw new HttpError(404, 'Not found');
 }
 
-async function serveStatic(res: ServerResponse, path: string) {
+const compressedStatic = staticCache();
+
+async function serveStatic(req: IncomingMessage, res: ServerResponse, path: string) {
   const file = normalize(join(STATIC_DIR, decodeURIComponent(path)));
-  const target = file.startsWith(STATIC_DIR) && (await stat(file).catch(() => null))?.isFile() ? file : join(STATIC_DIR, 'index.html');
+  const found = file.startsWith(STATIC_DIR) ? await stat(file).catch(() => null) : null;
+  const target = found?.isFile() ? file : join(STATIC_DIR, 'index.html');
   try {
-    const body = await readFile(target);
+    const info = found?.isFile() ? found : await stat(target);
+    const type = MIME[extname(target)] ?? 'application/octet-stream';
     const immutable = target.includes(`${STATIC_DIR}/assets/`);
+    const encoding = worthCompressing(type, info.size) ? pickEncoding(req.headers['accept-encoding']) : null;
+    // Compressed copies are cached, so the file is only read again when it changes.
+    const body = encoding ? compressedStatic(target, info.mtimeMs, encoding, () => readFileSync(target)) : await readFile(target);
     res.writeHead(200, {
-      'content-type': MIME[extname(target)] ?? 'application/octet-stream',
+      'content-type': type,
       'cache-control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache',
+      vary: 'accept-encoding',
+      ...(encoding && { 'content-encoding': encoding }),
     });
     res.end(body);
   } catch {
@@ -226,7 +243,7 @@ createServer(async (req, res) => {
   const path = new URL(req.url ?? '/', 'http://localhost').pathname;
   try {
     if (path.startsWith('/api/')) await handleApi(req, res, path);
-    else await serveStatic(res, path);
+    else await serveStatic(req, res, path);
   } catch (err) {
     if (err instanceof HttpError) return send(res, err.status, { error: err.message });
     if (err instanceof AuthError) return send(res, 401, { error: err.message });
