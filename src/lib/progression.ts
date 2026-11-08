@@ -1,6 +1,7 @@
 import { MUSCLE_BY_ID } from '../../shared/muscles.ts';
 import type { Entry, Exercise, WorkoutSet } from '../../shared/types.ts';
 import { formatDuration, formatKg } from './stats.ts';
+import type { Readiness } from './readiness.ts';
 import { wathen1RM } from './strength.ts';
 
 /*
@@ -185,4 +186,32 @@ export function suggestNext(history: Entry[], ex: Exercise, ctx: SuggestContext 
     };
   }
   return { short: `${kg(top)} × ${REP_FLOOR}`, detail: `Hold ${kg(top)} until every set reaches ${REP_FLOOR} reps.`, sets: last.sets, tone: 'hold' };
+}
+
+/**
+ * Today's suggestion after the morning check-in. "Hold" keeps last time's weights
+ * instead of going up; "ease" goes about 10% lighter (or ~20% fewer reps when
+ * there's no weight to drop) with one set fewer.
+ */
+export function forReadiness(suggestion: Suggestion, last: Entry, ex: Exercise, level: Readiness | null): Suggestion {
+  if (!level || level === 'push') return suggestion;
+  if (level === 'hold') {
+    if (suggestion.tone !== 'up') return suggestion;
+    return { short: 'Same as last time', detail: 'Not your best day: repeat last time rather than going up.', sets: last.sets, tone: 'hold' };
+  }
+  const base = suggestion.tone === 'up' ? last.sets : suggestion.sets;
+  const fewer = base.length > 2 ? base.slice(0, -1) : base;
+  const loaded = fewer.some((s) => s.weight > 0);
+  const sets = fewer.map((s) => {
+    if (ex.metric === 'time') return { ...s, seconds: Math.max(5, Math.round(((s.seconds ?? 0) * 0.8) / 5) * 5) };
+    if (loaded) return { ...s, weight: s.weight > 0 ? roundLoad(s.weight * 0.9) : 0 };
+    return { ...s, reps: Math.max(1, Math.round(s.reps * 0.8)) };
+  });
+  const lighter = loaded && ex.metric !== 'time' ? `${formatKg(Math.max(...sets.map((s) => s.weight)))}` : 'a little less';
+  return {
+    short: lighter,
+    detail: `Easy day: ${lighter}${fewer.length < base.length ? ', one set fewer' : ''}.`,
+    sets,
+    tone: 'down',
+  };
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useData, useUi } from '../data.tsx';
+import { nextStep } from '../lib/routines.ts';
 import { formatDuration } from '../lib/stats.ts';
 import { useSession } from '../session.tsx';
 
@@ -13,7 +14,7 @@ const clock = (totalSeconds: number) => {
 /** Sticky bar shown while a workout is in progress: elapsed time, rest timer and Finish. */
 export function SessionBar() {
   const { activeSession, entries, settings, routines, exById } = useData();
-  const { openSummary, openMuscle } = useUi();
+  const { openSummary, openMuscle, openSuperset } = useUi();
   const { rest, startRest, adjustRest, skipRest } = useSession();
   const [now, setNow] = useState(Date.now());
 
@@ -28,17 +29,21 @@ export function SessionBar() {
   const sets = mine.reduce((n, e) => n + e.sets.length, 0);
   const routine = routines.find((r) => r.id === activeSession.routineId);
   const done = new Set(mine.map((e) => e.exerciseId));
-  const next = routine?.items.find((i) => !done.has(i.exerciseId));
-  const nextEx = next && exById.get(next.exerciseId);
+  const step = routine ? nextStep(routine, done) : null;
+  const nextExs = (step ?? []).map((id) => exById.get(id)).filter((ex) => ex !== undefined);
+  const openNext = () => {
+    if (nextExs.length > 1) openSuperset(nextExs.map((ex) => ex.id));
+    else if (nextExs[0]) openMuscle(nextExs[0].muscle, nextExs[0].id);
+  };
   const elapsed = Math.max(0, Math.floor((now - Date.parse(activeSession.startedAt)) / 1000));
   const restLeft = rest ? Math.max(0, Math.ceil((rest.endsAt - now) / 1000)) : 0;
 
   return (
     <div className={`session-bar ${rest ? 'resting' : ''} ${routine ? 'with-routine' : ''}`} role="region" aria-label="Workout in progress">
       {routine && (
-        <button className="routine-next" onClick={() => nextEx && openMuscle(nextEx.muscle, nextEx.id)} disabled={!nextEx}>
-          <span className="muted">{routine.name} · {Math.min(done.size, routine.items.length)}/{routine.items.length}</span>
-          <strong>{nextEx ? `Next: ${nextEx.name} ›` : 'All done — finish up'}</strong>
+        <button className="routine-next" onClick={openNext} disabled={nextExs.length === 0}>
+          <span className="muted">{routine.name} · {routine.items.filter((i) => done.has(i.exerciseId)).length}/{routine.items.length}</span>
+          <strong>{nextExs.length ? `Next: ${nextExs.map((ex) => ex.name).join(' + ')} ›` : 'All done — finish up'}</strong>
         </button>
       )}
       {rest && <span className="rest-progress" style={{ width: `${(restLeft / rest.total) * 100}%` }} />}
@@ -57,7 +62,7 @@ export function SessionBar() {
           <button className="pill" onClick={() => startRest()}>Rest {formatDuration(settings.restSeconds)}</button>
         </div>
       )}
-      <button className="btn primary finish" onClick={() => openSummary(activeSession.id)}>Finish</button>
+      {!rest && <button className="btn primary finish" onClick={() => openSummary(activeSession.id)}>Finish</button>}
     </div>
   );
 }

@@ -5,6 +5,7 @@ const PATHS = {
   calendar: 'M4 6h16v14H4zM4 10h16M9 3v4m6-4v4',
   trophy: 'M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 3m8-3h3a3 3 0 0 1-3 3m-4 4v4m-4 3h8',
   plus: 'M12 5v14M5 12h14',
+  link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
   chevron: 'M9 6l6 6-6 6',
   chevronLeft: 'M15 6l-6 6 6 6',
   trash: 'M5 7h14M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3',

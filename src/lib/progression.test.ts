@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { entry, exercise, NOW } from '../test/fixtures.ts';
-import { suggestNext } from './progression.ts';
+import { forReadiness, suggestNext } from './progression.ts';
 
 const bench = exercise('Barbell Bench Press');
 const squat = exercise('Back Squat');
@@ -70,5 +70,27 @@ describe('suggestNext', () => {
     const plank = exercise('Plank');
     const h = [{ ...entry('Plank', 3, []), sets: [{ reps: 0, weight: 0, seconds: 60 }] }];
     assert.equal(suggestNext(h, plank, { now: NOW })!.short, '1:05');
+  });
+});
+
+describe('forReadiness', () => {
+  const last = entry('Barbell Bench Press', 3, [[10, 80], [10, 80], [10, 80]]);
+  const up = suggest([entry('Barbell Bench Press', 6, [[10, 80], [10, 80], [10, 80]]), last])!;
+
+  it('leaves the suggestion alone when ready to push or not checked in', () => {
+    assert.equal(forReadiness(up, last, bench, 'push'), up);
+    assert.equal(forReadiness(up, last, bench, null), up);
+  });
+
+  it('holds at last time instead of going up', () => {
+    const s = forReadiness(up, last, bench, 'hold');
+    assert.equal(s.tone, 'hold');
+    assert.deepEqual(s.sets, last.sets);
+  });
+
+  it('eases off: about 10% lighter and one set fewer', () => {
+    const s = forReadiness(up, last, bench, 'ease');
+    assert.equal(s.tone, 'down');
+    assert.deepEqual(s.sets.map((x) => [x.reps, x.weight]), [[10, 72.5], [10, 72.5]]);
   });
 });

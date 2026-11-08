@@ -2,7 +2,7 @@ import { MUSCLE_BY_ID } from '../../shared/muscles.ts';
 import type { Routine } from '../../shared/types.ts';
 import { Icon } from '../components/Icon.tsx';
 import { useData, useUi } from '../data.tsx';
-import { quickLogOps } from '../lib/routines.ts';
+import { quickLogOps, routineSteps } from '../lib/routines.ts';
 import { store } from '../lib/store.ts';
 import { useSession } from '../session.tsx';
 
@@ -48,7 +48,7 @@ export function RoutinesPage() {
               <button className="icon-btn small" onClick={() => openRoutine(r.id)} aria-label={`Edit ${r.name}`}><Icon name="settings" size={18} /></button>
             </div>
             <ol className="routine-preview">
-              {r.items.map((i) => <li key={i.exerciseId}>{exById.get(i.exerciseId)?.name}</li>)}
+              {routineSteps(r).map((step) => <li key={step[0]}>{step.map((id) => exById.get(id)?.name).join(' + ')}</li>)}
             </ol>
             <div className="routine-actions">
               <button className="btn primary" onClick={() => start(r)} disabled={!!activeSession}>

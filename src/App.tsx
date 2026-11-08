@@ -13,6 +13,7 @@ import { PlanSheet } from './components/PlanSheet.tsx';
 import { SessionBar } from './components/SessionBar.tsx';
 import { SorenessSheet } from './components/SorenessSheet.tsx';
 import { SummarySheet } from './components/SummarySheet.tsx';
+import { SupersetSheet } from './components/SupersetSheet.tsx';
 import { SessionProvider } from './session.tsx';
 import { DataProvider, UiCtx, type SheetState, type ToastAction } from './data.tsx';
 import { dateKey } from './lib/stats.ts';
@@ -113,6 +114,7 @@ export function App() {
         openInjury: (injuryId?: string) => open({ type: 'injury', injuryId }),
         openKind: (kind: 'plyometric' | 'mobility') => open({ type: 'kind', kind }),
         openQuick: () => open({ type: 'quick' }),
+        openSuperset: (exerciseIds: number[]) => open({ type: 'superset', exerciseIds }),
         notify: (message: string, tone: Toast['tone'] = 'default', action?: ToastAction) => setToast({ id: Date.now(), message, tone, action }),
       };
     },
@@ -170,6 +172,7 @@ export function App() {
             )}
             {sheet?.type === 'plan' && <PlanSheet onClose={closeSheet} />}
             {sheet?.type === 'quick' && <QuickSheet onClose={closeSheet} />}
+            {sheet?.type === 'superset' && <SupersetSheet key={sheet.exerciseIds.join('-')} exerciseIds={sheet.exerciseIds} onClose={closeSheet} />}
             {sheet?.type === 'football' && <FootballSheet onClose={closeSheet} />}
             {sheet?.type === 'routine' && <RoutineEditor key={sheet.routineId ?? 'new'} routineId={sheet.routineId} onClose={closeSheet} />}
             {sheet?.type === 'history' && <HistorySheet key={sheet.exerciseId} exerciseId={sheet.exerciseId} onClose={closeSheet} />}

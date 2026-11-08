@@ -55,3 +55,26 @@ export function routineFromSession(name: string, sessionEntries: Entry[]): Routi
     createdAt: new Date().toISOString(),
   };
 }
+
+/** The routine's exercises as they're done: singles, and supersets as pairs. */
+export function routineSteps(routine: Routine): number[][] {
+  const steps: number[][] = [];
+  for (let i = 0; i < routine.items.length; i++) {
+    const item = routine.items[i];
+    const partner = item.supersetNext ? routine.items[i + 1] : undefined;
+    if (partner) {
+      steps.push([item.exerciseId, partner.exerciseId]);
+      i++;
+    } else steps.push([item.exerciseId]);
+  }
+  return steps;
+}
+
+/** What's left of the first step that isn't finished, or null when the routine is done. */
+export function nextStep(routine: Routine, done: Set<number>): number[] | null {
+  for (const step of routineSteps(routine)) {
+    const left = step.filter((id) => !done.has(id));
+    if (left.length) return left;
+  }
+  return null;
+}

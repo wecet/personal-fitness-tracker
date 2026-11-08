@@ -65,6 +65,24 @@ describe('database', () => {
     assert.equal(bad.rejected.length, 3);
   });
 
+  it('keeps supersets as pairs and stores the morning check-in', () => {
+    const db = fresh();
+    const ids = db.state(U).exercises.slice(0, 4).map((e) => e.id);
+    const sets = [{ reps: 8, weight: 20 }];
+    const items = ids.map((exerciseId) => ({ exerciseId, sets, supersetNext: true }));
+    const { state } = db.sync(U, [
+      { op: 'put', kind: 'routine', record: { id: 'r1', name: 'Pairs', items, createdAt: '2026-11-01T10:00:00Z' } },
+      { op: 'put', kind: 'soreness', record: { id: 'sore-2026-11-01', recordedAt: '2026-11-01T07:00:00Z', muscles: {}, sleep: 1, energy: 3 } },
+    ]);
+    // A chain of four becomes two pairs, and the last exercise can't pair with nothing.
+    assert.deepEqual(state.records.routine[0].items.map((i) => !!i.supersetNext), [true, false, true, false]);
+    assert.equal(state.records.soreness[0].sleep, 1);
+    const bad = db.sync(U, [
+      { op: 'put', kind: 'soreness', record: { id: 'sore-2026-11-02', recordedAt: '2026-11-02T07:00:00Z', muscles: {}, sleep: 7 } },
+    ]);
+    assert.equal(bad.rejected.length, 1);
+  });
+
   it('adds custom exercises and refuses duplicates', () => {
     const db = fresh();
     const ex = db.addExercise(U, { name: 'Landmine Press', muscle: 'shoulders' });

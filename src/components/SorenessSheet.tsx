@@ -32,7 +32,7 @@ export function SorenessSheet({ onClose }: { onClose: () => void }) {
     });
 
   function save() {
-    put('soreness', { id, recordedAt: new Date().toISOString(), muscles });
+    put('soreness', { ...existing, id, recordedAt: new Date().toISOString(), muscles });
     const count = Object.keys(muscles).length;
     notify(count ? `Noted — ${count} sore muscle${count === 1 ? '' : 's'} will rest a little longer` : 'Feeling fresh 💪');
     onClose();

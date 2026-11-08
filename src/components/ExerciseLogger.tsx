@@ -1,10 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useData, useUi } from '../data.tsx';
-import { beats, bestSet, dateKey, formatPb, formatSet, formatSets, parseDateKey, type PersonalBest } from '../lib/stats.ts';
+import { beats, bestSet, dateKey, formatPb, formatSet, parseDateKey, type PersonalBest } from '../lib/stats.ts';
 import { haptic } from '../lib/haptics.ts';
 import { loadingStageName, rehabInjury } from '../lib/injuries.ts';
 import type { Exercise, ExerciseMetric, WorkoutSet } from '../../shared/types.ts';
-import { suggestNext } from '../lib/progression.ts';
+import { forReadiness, suggestNext } from '../lib/progression.ts';
+import { warmupSets } from '../lib/warmup.ts';
 import { useSession } from '../session.tsx';
 import { Icon } from './Icon.tsx';
 import { PlateSheet } from './PlateSheet.tsx';
@@ -30,16 +31,7 @@ const toDraft = (s: WorkoutSet, metric: ExerciseMetric): SetDraft => ({
   time: s.seconds ? clock(s.seconds) : '0:30',
 });
 
-const DAY = 86_400_000;
 const TONE_ICON = { up: '↗', hold: '→', down: '↘' } as const;
-
-function ago(iso: string, now: number) {
-  const days = Math.floor((now - Date.parse(iso)) / DAY);
-  if (dateKey(iso) === dateKey(new Date(now))) return 'today';
-  if (days <= 1) return 'yesterday';
-  if (days < 14) return `${days} days ago`;
-  return `${Math.round(days / 7)} weeks ago`;
-}
 
 const blank = (): SetDraft => ({ reps: '10', weight: '', time: '0:30' });
 
@@ -57,29 +49,181 @@ function parse(drafts: SetDraft[], metric: ExerciseMetric): WorkoutSet[] | null 
   return valid ? sets : null;
 }
 
-const COLUMNS: Record<ExerciseMetric, [string, string, string]> = {
-  weight: ['Reps', '×', 'Weight (kg)'],
-  bodyweight: ['Reps', '+', 'Added (kg)'],
-  time: ['Time', '', 'Added (kg)'],
+const COLUMNS: Record<ExerciseMetric, [string, string]> = {
+  weight: ['Reps', 'kg'],
+  bodyweight: ['Reps', '+ kg'],
+  time: ['Time', '+ kg'],
 };
 
-export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; pb?: PersonalBest; onSaved: () => void }) {
-  const { entries, sessions, injuries, now, addEntry, activeSession } = useData();
+/** Loadable steps: 1 kg on light dumbbells, 2.5 kg on bars and machines. */
+const kgStep = (kg: number, up: boolean) => (up ? kg >= 20 : kg > 20) ? 2.5 : 1;
+
+/** The next value on the grid of steps, so 81 goes to 82.5 or 80 rather than 83.5 or 78.5. */
+function stepValue(value: string, up: boolean, kind: 'reps' | 'kg'): string {
+  const n = Number(value.replace(',', '.')) || 0;
+  if (kind === 'reps') return String(Math.max(1, Math.round(n) + (up ? 1 : -1)));
+  const step = kgStep(n, up);
+  const next = up ? Math.floor(n / step + 1e-9) * step + step : Math.ceil(n / step - 1e-9) * step - step;
+  return next <= 0 ? '' : String(Math.round(next * 100) / 100);
+}
+
+function Stepper({ label, value, kind, placeholder, onChange }: {
+  label: string;
+  value: string;
+  kind: 'reps' | 'kg';
+  placeholder?: string;
+  onChange: (v: string) => void;
+}) {
+  const press = (up: boolean) => {
+    haptic();
+    onChange(stepValue(value, up, kind));
+  };
+  return (
+    <div className="stepper">
+      <button type="button" className="step" aria-label={`Less ${label}`} onClick={() => press(false)}>−</button>
+      <input aria-label={label} inputMode={kind === 'kg' ? 'decimal' : 'numeric'} placeholder={placeholder} value={value}
+        onChange={(e) => onChange(e.target.value)} onFocus={(e) => e.target.select()} />
+      <button type="button" className="step" aria-label={`More ${label}`} onClick={() => press(true)}>+</button>
+    </div>
+  );
+}
+
+/** How far a set row has to travel to count as a swipe. */
+const SWIPE_DONE_PX = 64;
+
+/** Swiping a set row to the right ticks it off, like tapping its number. */
+function useSwipe(enabled: boolean, onSwipe: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  const swipe = useRef(onSwipe);
+  swipe.current = onSwipe;
+  useEffect(() => {
+    const row = ref.current;
+    if (!row || !enabled) return;
+    let start: { x: number; y: number } | null = null;
+    let dragging = false;
+    const place = (dx: number, animate: boolean) => {
+      row.style.transition = animate ? 'translate var(--dur-base) var(--ease-out)' : 'none';
+      row.style.translate = dx ? `${dx}px 0` : '';
+      row.classList.toggle('swiping', dx >= SWIPE_DONE_PX);
+    };
+    const onStart = (e: TouchEvent) => {
+      if ((e.target as Element).closest('input')) return;
+      start = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      dragging = false;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!start) return;
+      const dx = e.touches[0].clientX - start.x;
+      const dy = e.touches[0].clientY - start.y;
+      if (!dragging) {
+        if (Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) return void (start = null);
+        if (dx < 8) return;
+        dragging = true;
+      }
+      // Resist past the threshold so it feels like it clicks into place.
+      place(dx < SWIPE_DONE_PX ? Math.max(0, dx) : SWIPE_DONE_PX + (dx - SWIPE_DONE_PX) * 0.25, false);
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (!start) return;
+      const dx = (e.changedTouches[0]?.clientX ?? start.x) - start.x;
+      start = null;
+      if (dragging && dx >= SWIPE_DONE_PX) swipe.current();
+      if (dragging) place(0, true);
+      dragging = false;
+    };
+    row.addEventListener('touchstart', onStart, { passive: true });
+    row.addEventListener('touchmove', onMove, { passive: true });
+    row.addEventListener('touchend', onEnd);
+    row.addEventListener('touchcancel', onEnd);
+    return () => {
+      row.removeEventListener('touchstart', onStart);
+      row.removeEventListener('touchmove', onMove);
+      row.removeEventListener('touchend', onEnd);
+      row.removeEventListener('touchcancel', onEnd);
+    };
+  }, [enabled]);
+  return ref;
+}
+
+function SetRow({ index, draft, metric, repsLabel, done, inSession, stopwatch, onDone, onChange, onStopwatch }: {
+  index: number;
+  draft: SetDraft;
+  metric: ExerciseMetric;
+  repsLabel: string;
+  done: boolean;
+  inSession: boolean;
+  stopwatch: number | null;
+  onDone: () => void;
+  onChange: (patch: Partial<SetDraft>) => void;
+  onStopwatch: () => void;
+}) {
+  const ref = useSwipe(inSession, onDone);
+  const running = stopwatch != null;
+  const n = index + 1;
+  return (
+    <div className={`set-row ${done ? 'is-done' : ''}`} ref={ref}>
+      {inSession ? (
+        <button type="button" className={`set-index set-done ${done ? 'done' : ''}`} aria-pressed={done} aria-label={`Set ${n} done`} onClick={onDone}>
+          {done ? '✓' : n}
+        </button>
+      ) : (
+        <span className="set-index">{n}</span>
+      )}
+      {metric === 'time' ? (
+        <div className="stepper timed">
+          <input aria-label={`Set ${n} time`} inputMode="numeric" placeholder="0:30" readOnly={running} className={running ? 'running' : ''}
+            value={running ? clock(stopwatch) : draft.time} onChange={(e) => onChange({ time: e.target.value })} />
+          <button type="button" className={`step stopwatch ${running ? 'running' : ''}`} aria-label={running ? 'Stop timer' : 'Start timer'} onClick={onStopwatch}>
+            <Icon name={running ? 'stop' : 'timer'} size={18} />
+          </button>
+        </div>
+      ) : (
+        <Stepper label={`set ${n} ${repsLabel.toLowerCase()}`} value={draft.reps} kind="reps" onChange={(reps) => onChange({ reps })} />
+      )}
+      <Stepper label={`set ${n} weight`} value={draft.weight} kind="kg" placeholder={metric === 'weight' ? '0' : 'BW'} onChange={(weight) => onChange({ weight })} />
+    </div>
+  );
+}
+
+/** Just what to do: "… two sessions running — go up to 65 kg." becomes "Go up to 65 kg." */
+const brief = (detail: string) => {
+  const what = detail.split(' — ').at(-1)!;
+  return what[0].toUpperCase() + what.slice(1);
+};
+
+const shortDate = (key: string) => parseDateKey(key).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+
+const sameSets = (a: WorkoutSet[], b: WorkoutSet[]) => JSON.stringify(a) === JSON.stringify(b);
+
+export function ExerciseLogger({ exercise, pb, onSaved, onSetDone }: {
+  exercise: Exercise;
+  pb?: PersonalBest;
+  onSaved: () => void;
+  /** In a superset the pair decides when to rest; otherwise ticking a set off starts it. */
+  onSetDone?: (index: number) => void;
+}) {
+  const { entries, sessions, injuries, now, addEntry, activeSession, readiness } = useData();
   const { startRest } = useSession();
   const { notify } = useUi();
   const { metric } = exercise;
   const last = entries.findLast((e) => e.exerciseId === exercise.id);
   const today = dateKey(new Date());
 
-  const [date, setDate] = useState(today);
-  const [sets, setSets] = useState<SetDraft[]>(() => (last ? last.sets.map((s) => toDraft(s, metric)) : [blank()]));
-  const [stopwatch, setStopwatch] = useState<{ index: number; startedAt: number } | null>(null);
-  const [, tick] = useState(0);
   const rehab = rehabInjury(injuries, exercise.muscle);
   const rpe = (e: { sessionId?: string | null }) => sessions.find((s) => s.id === e.sessionId)?.rpe;
-  const suggestion = rehab ? null : suggestNext(entries.filter((e) => e.exerciseId === exercise.id), exercise, { now, rpe });
-  const [applied, setApplied] = useState(false);
+  const [suggestion] = useState(() => {
+    const next = rehab || !last ? null : suggestNext(entries.filter((e) => e.exerciseId === exercise.id), exercise, { now, rpe });
+    return next && last ? forReadiness(next, last, exercise, readiness) : next;
+  });
+
+  const [date, setDate] = useState(today);
+  // Opens on today's target when there is one, else on what you did last time.
+  const [sets, setSets] = useState<SetDraft[]>(() => (suggestion ?? last)?.sets.map((s) => toDraft(s, metric)) ?? [blank()]);
+  const [usingLast, setUsingLast] = useState(!suggestion);
+  const [stopwatch, setStopwatch] = useState<{ index: number; startedAt: number } | null>(null);
+  const [, tick] = useState(0);
   const [done, setDone] = useState<Set<number>>(new Set());
+  const [warmDone, setWarmDone] = useState<Set<number>>(new Set());
   const [plates, setPlates] = useState(false);
 
   useEffect(() => {
@@ -91,8 +235,10 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
   const parsed = parse(sets, metric);
   const top = parsed && bestSet(parsed, metric);
   const beatsPb = !!(pb && top && beats(top, pb, metric));
-  const [primaryLabel, joiner, weightLabel] = COLUMNS[metric];
+  const [primaryLabel, weightLabel] = COLUMNS[metric];
   const repsLabel = exercise.kind === 'plyometric' ? (metric === 'weight' ? 'Throws' : 'Contacts') : primaryLabel;
+  const warmups = rehab || !parsed ? [] : warmupSets(exercise, parsed);
+  const inSession = !!activeSession;
 
   const update = (i: number, patch: Partial<SetDraft>) => setSets((s) => s.map((d, j) => (j === i ? { ...d, ...patch } : d)));
   const elapsed = (startedAt: number) => Math.max(1, Math.round((Date.now() - startedAt) / 1000));
@@ -103,8 +249,9 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
     if (next.has(i)) next.delete(i);
     else {
       next.add(i);
-      haptic();
-      startRest();
+      haptic('success');
+      if (onSetDone) onSetDone(i);
+      else startRest();
     }
     setDone(next);
   }
@@ -116,6 +263,14 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
     } else {
       setStopwatch({ index: i, startedAt: Date.now() });
     }
+  }
+
+  function switchTo(lastTime: boolean) {
+    const source = lastTime ? last : suggestion;
+    if (!source) return;
+    setSets(source.sets.map((s) => toDraft(s, metric)));
+    setUsingLast(lastTime);
+    setDone(new Set());
   }
 
   function submit(e: FormEvent) {
@@ -130,86 +285,74 @@ export function ExerciseLogger({ exercise, pb, onSaved }: { exercise: Exercise; 
 
   return (
     <form className="logger" onSubmit={submit}>
-      {rehab && (
+      {rehab ? (
         <div className="suggestion rehab">
           <span className="suggestion-icon">+</span>
           <span>
-            <strong>Rehab sets only.</strong> Keep it light and pain-free — progression is paused until you clear
-            “{loadingStageName(rehab)}” on your return-to-play checklist.
+            <strong>Rehab sets only.</strong> Keep it light and pain-free until you clear “{loadingStageName(rehab)}”.
           </span>
         </div>
-      )}
-      {suggestion && (
-        <div className={`suggestion ${suggestion.tone}`}>
-          <span className="suggestion-icon" aria-hidden="true">{TONE_ICON[suggestion.tone]}</span>
-          <span>
-            {last && <span className="last-time">Last time, {ago(last.performedAt, now)}: {formatSets(last.sets, metric)}</span>}
-            {suggestion.detail}
-          </span>
-          <button type="button" className="pill" disabled={applied} onClick={() => {
-            setSets(suggestion.sets.map((s) => toDraft(s, metric)));
-            setApplied(true);
-          }}>
-            {applied ? 'Applied' : 'Apply'}
-          </button>
+      ) : suggestion && last && (
+        <div className={`suggestion ${usingLast ? 'hold' : suggestion.tone}`}>
+          <span className="suggestion-icon" aria-hidden="true">{usingLast ? '↺' : TONE_ICON[suggestion.tone]}</span>
+          <span>{usingLast ? 'Same as last time.' : brief(suggestion.detail)}</span>
+          {!sameSets(suggestion.sets, last.sets) && (
+            <button type="button" className="pill" onClick={() => switchTo(!usingLast)}>
+              {usingLast ? 'Suggested' : 'Last time'}
+            </button>
+          )}
         </div>
       )}
-      {activeSession && <p className="muted small logger-hint">Tap a set number when it’s done to start your rest.</p>}
+
+      {warmups.length > 0 && (
+        <div className="warmup" role="group" aria-label="Warm-up sets, not saved">
+          <span className="warmup-label">Warm-up</span>
+          {warmups.map((w, i) => (
+            <button key={i} type="button" className={`warmup-set ${warmDone.has(i) ? 'done' : ''}`} aria-pressed={warmDone.has(i)}
+              onClick={() => setWarmDone((cur) => {
+                const next = new Set(cur);
+                if (next.has(i)) next.delete(i);
+                else next.add(i);
+                return next;
+              })}>
+              {w.weight}<span className="unit">×{w.reps}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="logger-sets">
         <div className="set-row set-head">
           <span>Set</span>
           <span>{repsLabel}</span>
-          <span />
           <span>{weightLabel}</span>
-          <span />
         </div>
-        {sets.map((s, i) => {
-          const running = stopwatch?.index === i;
-          return (
-            <div className="set-row" key={i}>
-              {activeSession ? (
-                <button type="button" className={`set-index set-done ${done.has(i) ? 'done' : ''}`} aria-pressed={done.has(i)}
-                  aria-label={`Set ${i + 1} done`} onClick={() => toggleDone(i)}>
-                  {done.has(i) ? '✓' : i + 1}
-                </button>
-              ) : (
-                <span className="set-index">{i + 1}</span>
-              )}
-              {metric === 'time' ? (
-                <input aria-label={`Set ${i + 1} time`} inputMode="numeric" placeholder="0:30" readOnly={running}
-                  className={running ? 'running' : ''}
-                  value={running ? clock(elapsed(stopwatch.startedAt)) : s.time} onChange={(e) => update(i, { time: e.target.value })} />
-              ) : (
-                <input aria-label={`Set ${i + 1} reps`} inputMode="numeric" value={s.reps} onChange={(e) => update(i, { reps: e.target.value })} />
-              )}
-              {metric === 'time' ? (
-                <button type="button" className={`icon-btn small stopwatch ${running ? 'running' : ''}`}
-                  aria-label={running ? 'Stop timer' : 'Start timer'} onClick={() => toggleStopwatch(i)}>
-                  <Icon name={running ? 'stop' : 'timer'} size={18} />
-                </button>
-              ) : (
-                <span className="muted joiner">{joiner}</span>
-              )}
-              <input aria-label={`Set ${i + 1} weight`} inputMode="decimal" placeholder={metric === 'weight' ? '0' : 'BW'}
-                value={s.weight} onChange={(e) => update(i, { weight: e.target.value })} />
-              <button type="button" className="icon-btn small" aria-label={`Remove set ${i + 1}`} disabled={sets.length === 1}
-                onClick={() => { setSets((all) => all.filter((_, j) => j !== i)); setDone(new Set()); }}>
-                <Icon name="close" size={16} />
-              </button>
-            </div>
-          );
-        })}
+        {sets.map((s, i) => (
+          <SetRow key={i} index={i} draft={s} metric={metric} repsLabel={repsLabel} done={done.has(i)} inSession={inSession}
+            stopwatch={stopwatch?.index === i ? elapsed(stopwatch.startedAt) : null}
+            onDone={() => toggleDone(i)} onChange={(patch) => update(i, patch)} onStopwatch={() => toggleStopwatch(i)} />
+        ))}
+        {inSession && done.size === 0 && <p className="muted small logger-hint">Tap or swipe a set when it’s done to start your rest.</p>}
       </div>
+
       <div className="logger-actions">
         <button type="button" className="btn ghost" onClick={() => setSets((all) => [...all, { ...all[all.length - 1] }])}>
-          <Icon name="plus" size={16} /> Add set
+          + Set
+        </button>
+        <button type="button" className="btn ghost" disabled={sets.length === 1} aria-label="Remove last set"
+          onClick={() => { setSets((all) => all.slice(0, -1)); setDone((cur) => new Set([...cur].filter((i) => i < sets.length - 1))); }}>
+          − Set
         </button>
         {metric === 'weight' && (
           <button type="button" className="icon-btn" aria-label="Plate calculator" onClick={() => setPlates(true)}>
             <Icon name="plates" />
           </button>
         )}
-        <input type="date" className="date-input" value={date} max={today} onChange={(e) => setDate(e.target.value || today)} aria-label="Workout date" />
+        <label className="date-chip">
+          <Icon name="calendar" size={16} />
+          <span>{date === today ? 'Today' : shortDate(date)}</span>
+          <input type="date" value={date} max={today} onChange={(e) => setDate(e.target.value || today)} aria-label="Workout date" />
+        </label>
       </div>
       {beatsPb && <p className="pb-hint">This beats your PB of {formatPb(pb!, metric)} 🔥</p>}
       <button className="btn primary block" disabled={!parsed || !!stopwatch}>

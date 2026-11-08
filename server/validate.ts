@@ -123,10 +123,15 @@ export function makeValidators(getExercise: (id: number) => Exercise | undefined
       const name = typeof r.name === 'string' ? r.name.trim().slice(0, 60) : '';
       if (!name) fail('Routine name is required');
       if (!Array.isArray(r.items) || r.items.length === 0 || r.items.length > 30) fail('A routine needs 1–30 exercises');
-      const items = (r.items as unknown[]).map((raw) => {
+      const raws = r.items as unknown[];
+      let pairedAbove = false;
+      const items = raws.map((raw, i) => {
         const item = object(raw);
         const exercise = getExercise(Number(item.exerciseId)) ?? fail('Unknown exercise');
-        return { exerciseId: exercise.id, sets: sets(item.sets, exercise.metric) };
+        // Supersets are pairs: never the last exercise, never chained onto a pair.
+        const supersetNext = item.supersetNext === true && i < raws.length - 1 && !pairedAbove;
+        pairedAbove = supersetNext;
+        return { exerciseId: exercise.id, sets: sets(item.sets, exercise.metric), ...(supersetNext && { supersetNext }) };
       });
       return { id: recordId(r.id), name, items, createdAt: isoDate(r.createdAt, 'createdAt') };
     },
@@ -138,7 +143,14 @@ export function makeValidators(getExercise: (id: number) => Exercise | undefined
         if (level !== 1 && level !== 2) fail('Soreness level must be 1 or 2');
         muscles[m] = level as 1 | 2;
       }
-      return { id: recordId(r.id), recordedAt: isoDate(r.recordedAt, 'recordedAt'), muscles };
+      const level = (v: unknown, field: string) => (v == null ? undefined : (int(v, field, 1, 3) as 1 | 2 | 3));
+      return {
+        id: recordId(r.id),
+        recordedAt: isoDate(r.recordedAt, 'recordedAt'),
+        muscles,
+        ...(r.sleep != null && { sleep: level(r.sleep, 'sleep') }),
+        ...(r.energy != null && { energy: level(r.energy, 'energy') }),
+      };
     },
     activity(raw) {
       const r = object(raw);

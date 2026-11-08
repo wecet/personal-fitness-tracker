@@ -5,8 +5,10 @@ import { dailyLoad, workloadSeries, type DayLoad, type Workload } from './lib/lo
 import { newId, store } from './lib/store.ts';
 import { setEfforts, type SetEffort } from './lib/strain.ts';
 import { preventionStatus, type ProtocolStatus } from './lib/injuries.ts';
+import { readiness as readinessFor, type Readiness } from './lib/readiness.ts';
+import { dateKey } from './lib/dates.ts';
 import type { MuscleId } from '../shared/muscles.ts';
-import { DEFAULT_SETTINGS, type Activity, type AppState, type Entry, type Exercise, type ExerciseKind, type Injury, type NewExercise, type RecordKind, type RecordMap, type Records, type Routine, type Settings, type WorkoutSession } from '../shared/types.ts';
+import { DEFAULT_SETTINGS, type Activity, type AppState, type Entry, type Exercise, type ExerciseKind, type Injury, type NewExercise, type RecordKind, type RecordMap, type Records, type Routine, type Settings, type Soreness, type WorkoutSession } from '../shared/types.ts';
 
 export type NewEntry = Omit<Entry, 'id' | 'note'> & { note?: string | null };
 
@@ -27,6 +29,10 @@ interface AppData {
   prevention: ProtocolStatus[];
   settings: Settings;
   rec: Recommendation;
+  /** Today's check-in (sleep, energy, sore muscles), if there is one. */
+  checkIn: Soreness | undefined;
+  /** The call for today from the check-in; null until sleep and energy are answered. */
+  readiness: Readiness | null;
   /** Training load per local day. */
   daily: Map<string, DayLoad>;
   firstDay: string | null;
@@ -100,6 +106,13 @@ export function DataProvider({ state, children }: { state: AppState; children: R
     [entries, activities, exercises, exById, fatigue, settings, injuries, prevention, now],
   );
 
+  const today = dateKey(new Date(now));
+  const checkIn = useMemo(() => records.soreness.find((s) => s.id === `sore-${today}`), [records.soreness, today]);
+  const readiness = useMemo(
+    () => readinessFor({ checkIn, loadZone: load.zone, matchYesterday: rec.football?.label === 'MD+1' }),
+    [checkIn, load.zone, rec.football?.label],
+  );
+
   const put = useCallback(<K extends RecordKind>(kind: K, record: RecordMap[K]) => {
     store.enqueue({ op: 'put', kind, record } as never);
   }, []);
@@ -126,8 +139,8 @@ export function DataProvider({ state, children }: { state: AppState; children: R
   }, []);
 
   const value = useMemo(
-    () => ({ exercises, records, entries, activities, sessions, activeSession, routines, injuries, prevention, settings, rec, daily, firstDay, loadSeries, load, exById, pbs, prEntryIds, efforts, fatigue, now, put, remove, addEntry, addExercise }),
-    [exercises, records, entries, activities, sessions, activeSession, routines, injuries, prevention, settings, rec, daily, firstDay, loadSeries, load, exById, pbs, prEntryIds, efforts, fatigue, now, put, remove, addEntry, addExercise],
+    () => ({ exercises, records, entries, activities, sessions, activeSession, routines, injuries, prevention, settings, rec, checkIn, readiness, daily, firstDay, loadSeries, load, exById, pbs, prEntryIds, efforts, fatigue, now, put, remove, addEntry, addExercise }),
+    [exercises, records, entries, activities, sessions, activeSession, routines, injuries, prevention, settings, rec, checkIn, readiness, daily, firstDay, loadSeries, load, exById, pbs, prEntryIds, efforts, fatigue, now, put, remove, addEntry, addExercise],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -143,6 +156,7 @@ export type SheetState =
   | { type: 'muscle'; muscle: MuscleId; exerciseId?: number }
   | { type: 'plan' }
   | { type: 'quick' }
+  | { type: 'superset'; exerciseIds: number[] }
   | { type: 'football' }
   | { type: 'summary'; sessionId: string }
   | { type: 'soreness' }
@@ -164,6 +178,8 @@ interface UiActions {
   /** All plyometric or mobility exercises, across muscles. */
   openKind(kind: Exclude<ExerciseKind, 'strength'>): void;
   openQuick(): void;
+  /** Two routine exercises done back to back. */
+  openSuperset(exerciseIds: number[]): void;
   notify(message: string, tone?: 'default' | 'pb' | 'error', action?: ToastAction): void;
 }
 

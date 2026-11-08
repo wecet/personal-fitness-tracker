@@ -64,6 +64,8 @@ export interface RoutineItem {
   exerciseId: number;
   /** Planned sets; refreshed from what you did each time the routine is finished. */
   sets: WorkoutSet[];
+  /** Done as a superset with the next exercise: alternate sets, rest after each pair. */
+  supersetNext?: boolean;
 }
 
 export interface Routine {
@@ -101,11 +103,19 @@ export const DEFAULT_SETTINGS: Settings = { id: 'settings', matchDays: [6], trai
 /** 1 = a bit sore, 2 = very sore. */
 export type SorenessLevel = 1 | 2;
 
-/** One check-in per day (id "sore-YYYY-MM-DD"); the latest replaces earlier ones. */
+/** 1 = poor, 2 = OK, 3 = good. */
+export type CheckInLevel = 1 | 2 | 3;
+
+/**
+ * The daily check-in (id "sore-YYYY-MM-DD"); the latest replaces earlier ones.
+ * Sore muscles plus, optionally, how you slept and how much energy you have.
+ */
 export interface Soreness {
   id: string;
   recordedAt: string;
   muscles: Partial<Record<MuscleId, SorenessLevel>>;
+  sleep?: CheckInLevel;
+  energy?: CheckInLevel;
 }
 
 /** One weigh-in per day (id "bw-YYYY-MM-DD"). */
