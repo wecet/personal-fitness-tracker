@@ -4,9 +4,18 @@
 
 A personal workout tracker that runs as a web app, built around both the gym and football. Tap a muscle on the body map to log sets, track PBs, and watch the red recovery fill fade. It's self-hosted with Docker and only reachable from your own devices over Tailscale. Each person signs in with their own account and sees only their own data.
 
+## Design
+
+Tempo keeps time. Three ideas run through the whole app:
+
+- **Rhythm:** every looping animation (the breathing body map, the live dot, the suggestion glow) moves on one shared beat of about 66 BPM, synced so they pulse together. The week is a bar of seven beats on Home, with match day as the downbeat. The rest timer counts in its last three seconds like a metronome.
+- **Bars:** the logo's three rising bars are the shape language. Readiness is 1–3 lit bars, loading uses the bars, and every section heading starts on a bar.
+- **Heat:** colour means temperature. Coral is effort, fatigue and things to do; cool slate is recovered and ready; amber asks for attention; green is kept for gains; football has its own blue.
+
 ## Features
 
 - **Quick log (+):** one tap to start a workout or a saved routine, or to log football, plyometrics or mobility. Sheets opened from another sheet have a back button.
+- **This week:** a strip of seven days under today's plan, with bars that grow with each day's training load (coral for gym, blue for football) and planned training and match days outlined ahead. It's hidden on short phones to keep the body map in view.
 - **Body map:** a shaded 2.5D front/back figure. Tap a muscle to log a workout; swipe or press the turn button to see the other side. Three views:
   - **Recovery:** trained muscles fill red and fade over their rest period.
   - **Volume:** weekly sets against a 10–20 target. A scrubber (or play button) replays the last 12 weeks one week at a time.

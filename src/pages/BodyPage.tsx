@@ -4,7 +4,9 @@ import { BodyMap, type OverlayTone, type Side } from '../components/BodyMap.tsx'
 import { Icon } from '../components/Icon.tsx';
 import { useData, useUi } from '../data.tsx';
 import { injuredSides, injuryLabel, isActive } from '../lib/injuries.ts';
-import { READINESS_LABEL } from '../lib/readiness.ts';
+import { READINESS_BARS, READINESS_LABEL } from '../lib/readiness.ts';
+import { Bars } from '../components/Brand.tsx';
+import { WeekStrip } from '../components/WeekStrip.tsx';
 import { daysSinceTrained, weeklySets } from '../lib/stats.ts';
 
 type Mode = 'recovery' | 'volume' | 'neglected';
@@ -136,10 +138,13 @@ export function BodyPage() {
       <button className={`today-line ${spike ? 'warn' : ''}`} onClick={spike ? () => (location.hash = '#/progress/load') : openPlan}>
         <span className="today-day">{rec.weekday.slice(0, 3)}</span>
         {rec.football && !rec.headline.startsWith(rec.football.label) && <span className="md-tag">{rec.football.label}</span>}
-        {readiness && readiness !== 'push' && <span className={`ready-tag ${readiness}`}>{READINESS_LABEL[readiness]}</span>}
+        {readiness && readiness !== 'push' && (
+          <span className={`ready-tag ${readiness}`}><Bars level={READINESS_BARS[readiness]} size={12} />{READINESS_LABEL[readiness]}</span>
+        )}
         <span className="today-text">{spike ? `Load spike — ${load.ratio!.toFixed(1)}× your usual week` : rec.headline}</span>
         <Icon name="chevron" size={16} />
       </button>
+      <WeekStrip />
 
       <BodyMap overlay={overlay} tone={MODES.find((m) => m.id === mode)!.tone} suggested={mode === 'recovery' ? rec.muscles : []} injured={injured}
         onSelect={(m) => openMuscle(m)} side={side} onSideChange={setSide} peek={peek} />

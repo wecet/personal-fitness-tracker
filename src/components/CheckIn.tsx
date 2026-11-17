@@ -2,7 +2,8 @@ import type { CheckInLevel, Soreness } from '../../shared/types.ts';
 import { useData, useUi } from '../data.tsx';
 import { haptic } from '../lib/haptics.ts';
 import { dateKey } from '../lib/dates.ts';
-import { READINESS_LABEL, READINESS_NOTE } from '../lib/readiness.ts';
+import { READINESS_BARS, READINESS_LABEL, READINESS_NOTE } from '../lib/readiness.ts';
+import { Bars } from './Brand.tsx';
 
 const QUESTIONS: { key: 'sleep' | 'energy'; label: string; answers: [string, string, string] }[] = [
   { key: 'sleep', label: 'Sleep', answers: ['Poor', 'OK', 'Good'] },
@@ -40,7 +41,7 @@ export function CheckIn() {
       <div className="check-foot">
         {readiness ? (
           <p className="check-verdict" aria-live="polite">
-            <strong>{READINESS_LABEL[readiness]}</strong> {READINESS_NOTE[readiness]}
+            <Bars level={READINESS_BARS[readiness]} /> <strong>{READINESS_LABEL[readiness]}</strong> {READINESS_NOTE[readiness]}
           </p>
         ) : (
           <p className="muted small">Answer both and today’s weights adjust to how you feel.</p>

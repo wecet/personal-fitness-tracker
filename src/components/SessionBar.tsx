@@ -11,6 +11,9 @@ const clock = (totalSeconds: number) => {
   return h ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
 };
 
+/** Seconds of rest counted in, metronome style. */
+const COUNT_IN = 3;
+
 /** Sticky bar shown while a workout is in progress: elapsed time, rest timer and Finish. */
 export function SessionBar() {
   const { activeSession, entries, settings, routines, exById } = useData();
@@ -24,6 +27,14 @@ export function SessionBar() {
     return () => clearInterval(id);
   }, [activeSession, rest]);
 
+  const restLeft = rest ? Math.max(0, Math.ceil((rest.endsAt - now) / 1000)) : 0;
+  const counting = rest != null && restLeft > 0 && restLeft <= COUNT_IN;
+
+  // The last three seconds tick like a metronome: a small tap on each.
+  useEffect(() => {
+    if (counting) navigator.vibrate?.(12);
+  }, [counting, restLeft]);
+
   if (!activeSession) return null;
   const mine = entries.filter((e) => e.sessionId === activeSession.id);
   const sets = mine.reduce((n, e) => n + e.sets.length, 0);
@@ -36,7 +47,6 @@ export function SessionBar() {
     else if (nextExs[0]) openMuscle(nextExs[0].muscle, nextExs[0].id);
   };
   const elapsed = Math.max(0, Math.floor((now - Date.parse(activeSession.startedAt)) / 1000));
-  const restLeft = rest ? Math.max(0, Math.ceil((rest.endsAt - now) / 1000)) : 0;
 
   return (
     <div className={`session-bar ${rest ? 'resting' : ''} ${routine ? 'with-routine' : ''}`} role="region" aria-label="Workout in progress">
@@ -49,7 +59,7 @@ export function SessionBar() {
       {rest && <span className="rest-progress" style={{ width: `${(restLeft / rest.total) * 100}%` }} />}
       {rest ? (
         <div className="rest-controls">
-          <span className="rest-time" aria-live="polite">{clock(restLeft)}</span>
+          <span key={counting ? restLeft : 'rest'} className={`rest-time ${counting ? 'tick' : ''}`} aria-live="polite">{clock(restLeft)}</span>
           <button className="pill" onClick={() => adjustRest(-15)}>−15</button>
           <button className="pill" onClick={() => adjustRest(15)}>+15</button>
           <button className="pill" onClick={skipRest}>Skip</button>

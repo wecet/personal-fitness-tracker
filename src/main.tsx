@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Root } from './auth.tsx';
+import { keepTime } from './lib/beat.ts';
 import './styles.css';
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
@@ -19,6 +20,8 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     else if (updateReady && Date.now() - hiddenAt > RELOAD_AFTER_AWAY_MS) location.reload();
   });
 }
+
+keepTime();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

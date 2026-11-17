@@ -14,6 +14,9 @@ export type Readiness = 'push' | 'hold' | 'ease';
 
 export const READINESS_LABEL: Record<Readiness, string> = { push: 'Push', hold: 'Hold steady', ease: 'Ease off' };
 
+/** Readiness drawn as the logo's bars: three lit to push, one to ease off. */
+export const READINESS_BARS: Record<Readiness, 1 | 2 | 3> = { push: 3, hold: 2, ease: 1 };
+
 export const READINESS_NOTE: Record<Readiness, string> = {
   push: 'You’re good to go — aim to beat last time.',
   hold: 'Repeat last time’s weights rather than going up.',
